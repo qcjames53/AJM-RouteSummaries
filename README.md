@@ -45,7 +45,7 @@ An MS-Excel workbook containing any number of rows with row 0 reserved for fixed
     * The difference between the ARRIVAL TIME and the SCHEDULE TIME for this stop. May be left blank if SCHEDULE TIME is also left blank.
 
 #### Route Information File
-An MS-Excel workbook containing any number of sheets, each of which represents a ROUTE-DIRECTION combination of the form 'Rte #D' where # is the ROUTE and D is the DIRECTION as defined above in the Ride Checks Data File section.
+An MS-Excel workbook containing any number of sheets, each of which represents a ROUTE-DIRECTION combination of the form 'Rte #D' where # is the ROUTE and D is the DIRECTION as defined above in the [Ride Checks Data File section](https://github.com/qcjames53/AJM-RouteSummaries#ride-checks-data-file).
 
 A template file can be created using the program menu. Each sheet may contain an unlimited number of column-aligned tables on arbitrary rows. The following information is required for each table header:
 
