@@ -2,18 +2,19 @@
 
 A Python software solution for summarizing ridership statistics from bus routes. The program uses two Microsoft Excel workbooks as input and ouputs five summaries to an Excel workbook, each summary focusing on various statistics.
 
-## Using Route Summaries Program
+## Using The Program
 This section of documentation is incomplete and will be updated as the program is developed.
 
 Note that this program has the following dependencies:
 * [Python 3.9.5](https://www.python.org/downloads/release/python-395/)
 
+---
+
 ## Program Inputs
 Route Summaries requires two Microsoft Excel workbook files as input to properly produce summaries: A ride checks data file and a route information file. Template files can be created through the program menu (future feature, not yet implemented).
 
-##### Ride Checks Data File
+#### Ride Checks Data File
 An MS-Excel workbook containing any number of rows with row 0 reserved for fixed headers. Each row contains the following columns of data, representing one ride check data entry:
-
 * SEQUENCE
     * Sequence number, the index of this ride check data entry. Numbers should be in order, with the first row (excel row 2) starting at sequence number 1. This number is for sorting convenience in the inital workbook.
 * DATE
@@ -43,7 +44,7 @@ An MS-Excel workbook containing any number of rows with row 0 reserved for fixed
 * TIME CHECK
     * The difference between the ARRIVAL TIME and the SCHEDULE TIME for this stop. May be left blank if SCHEDULE TIME is also left blank.
 
-##### Route Information File
+#### Route Information File
 An MS-Excel workbook containing any number of sheets, each of which represents a ROUTE-DIRECTION combination of the form 'Rte #D' where # is the ROUTE and D is the DIRECTION as defined above in the Ride Checks Data File section.
 
 A template file can be created using the program menu. Each sheet may contain an unlimited number of column-aligned tables on arbitrary rows. The following information is required for each table header:
@@ -65,13 +66,15 @@ Additionally, each row of the table represents a stop on this route. Each row mu
 * NO
     * The stop number for this route. Columns must be in numberical order from top to bottom.
 
+---
+
 ## Program Output
 Route Summaries outputs an MS-Excel workbook containing seven sheets displaying various summaries. Descriptions of the outputs are detialed below:
 
-##### Log
+#### Log
 A sheet that details errors and warnings encountered during generation of this output workbook.
 
-##### Rte Totals
+#### Rte Totals
 A sheet which shows the passenger totals for each route / direction combination. Formatted as rows of totals, each column representing the following:
 * Route No.
     * This line's route number.
@@ -84,7 +87,7 @@ A sheet which shows the passenger totals for each route / direction combination.
 * Total
     * The total of the boarded and departed passenger counts.
 
-##### Max Load
+#### Max Load
 A sheet which shows the maximum number of passengers on a given route over time. Data is formatted as rows, each column representing the following:
 * Route No.
     * This line's route number.
@@ -99,13 +102,13 @@ A sheet which shows the maximum number of passengers on a given route over time.
 * Max Load
     * The maximum number of passengers on a bus during this route.
 
-##### Detailed Trip Summaries
+#### Detailed Trip Summaries
 A sheet which shows boardings, departures, and carryover passengers for each stop for each route over the course of a day.
 
-##### On Time Detail
+#### On Time Detail
 A sheet which shows bus routes that arrive on-time or behind schedule. Data is diplayed for each timed stop for each route for each scheduled route start time.
 
-##### Ons, Offs, Tot & Ld
+#### Ons, Offs, Tot & Ld
 A sheet which displays totals for each stop on each route. Data is output in rows, each column representing the following:
 * Route No.
     * This line's route number.
@@ -126,9 +129,7 @@ A sheet which displays totals for each stop on each route. Data is output in row
 * Load
     * The total number of passengers onboard the bus after this stop.
 
-Each route is prefaced by a row titled 'ONBOARD'. This row represents the total passengers being carried over from a previous route.
+Each route is prefaced by a row titled 'ONBOARD'. This row represents the total passengers being carried over from a previous route. Additionally, each route is appended by a row titled 'TOTAL'. This row represents the total of all four data columns for all stops on this route.
 
-Additionally, each route is appended by a row titled 'TOTAL'. This row represents the total of all four data columns for all stops on this route.
-
-##### Notes
+#### Notes
 An additional sheet used to detail operational details which may affect the collected data. This data is manually added after workbook generation.
