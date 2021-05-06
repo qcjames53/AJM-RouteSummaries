@@ -1,6 +1,6 @@
 # AJM-RouteSummaries
 
-A Python software solution for summarizing ridership statistics from bus routes. The program uses two Microsoft Excel workbooks as input and ouputs five summaries to an Excel workbook, each summary focusing on various statistics.
+A Python software solution for summarizing ridership statistics from bus routes. The program uses two Microsoft Excel workbooks as input and ouputs five summaries to an Excel workbook, each summary focusing on various statistics. This is a proprietary project, written for AJM & Associates LLC.
 
 ## Using The Program
 This section of documentation is incomplete and will be updated as the program is developed.
@@ -133,3 +133,6 @@ Each route is prefaced by a row titled 'ONBOARD'. This row represents the total 
 
 #### Notes
 An additional sheet used to detail operational details which may affect the collected data. This data is manually added after workbook generation.
+
+## License
+This project is proprietary. Copyright 2021 by AJM & Associates LLC.
