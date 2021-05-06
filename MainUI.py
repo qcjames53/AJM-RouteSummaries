@@ -5,6 +5,7 @@
 
 import tkinter
 import webbrowser
+from TemplateGeneratorRideChecks import *
 
 # Constants
 DefaultWindowSize = "500x200"
@@ -44,7 +45,8 @@ class MainWindow(tkinter.Frame):
         # Create Template Menu
         templateMenu = tkinter.Menu(menu)
         generateMenu = tkinter.Menu(templateMenu)
-        generateMenu.add_command(label="Ride Checks")
+        generateMenu.add_command(label="Ride Checks", 
+            command=self.createRideChecks)
         generateMenu.add_command(label="Route Information")
         templateMenu.add_cascade(label="Generate Template", menu=generateMenu)
         menu.add_cascade(label="Template", menu=templateMenu)
@@ -72,11 +74,14 @@ class MainWindow(tkinter.Frame):
         """
         exit()
 
+    
+    def createRideChecks(self):
+        createTemplateRideChecks()
+
 
 # Main program start
 root = tkinter.Tk()
 app = MainWindow(root)
-about = AboutWindow(app)
 root.wm_title("Route Summaries Utility")
 root.geometry(DefaultWindowSize)
 root.mainloop()
