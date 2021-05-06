@@ -7,6 +7,7 @@ This section of documentation is incomplete and will be updated as the program i
 
 Note that this program has the following dependencies:
 * [Python 3.9.5](https://www.python.org/downloads/release/python-395/)
+* [openpyxl](https://openpyxl.readthedocs.io/en/stable/) - Install with 'pip install openpyxl'
 
 ---
 
