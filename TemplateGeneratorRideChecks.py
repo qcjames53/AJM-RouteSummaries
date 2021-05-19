@@ -1,26 +1,16 @@
-# Date: 2021-05-06
+# Author: Quinn James (qj@quinnjam.es)
 # 
 # A program for generating a template ride checks log workbook
 #
-# Command line options:
-# -o <filepath>
-#   Specify the output location for the created template. Defaults to
-#   'ridechecks[date].xlsx' if not specified.
+# More details about this project can be found in the README file or at:
+#   https://github.com/qcjames53/AJM-RouteSummaries
 
-import sys
-from datetime import date
 import openpyxl
 
 # Constants
-DEFUALT_OUTPUT_PREFIX = "ridechecks"
 SHEET_TITLE = "Ride Checks"
 
-def createTemplateRideChecks(filepath=None):
-    # Get default filename
-    if filepath == None:
-        date_string = str(date.today())
-        filepath = DEFUALT_OUTPUT_PREFIX + date_string + ".xlsx"
-
+def createTemplateRideChecks(filepath):
     # Create output workbook / sheet
     wb = openpyxl.Workbook()
     sheet = wb.active

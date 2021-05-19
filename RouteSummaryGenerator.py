@@ -1,15 +1,13 @@
-# Date: 2021-05-04
+# Author: Quinn James (qj@quinnjam.es)
 #
 # A command-line utility to generate a ridership summary for bus routes.
 # Functionality of this program's input and output files are documented in the
 # main README.md file.
 #
-# Command line options:
-#   -l <filepath>
-#       Specify the ride checks log input file.
-#   -i <filepath>
-#       Specify the route information file.
-#   -o <filepath>
-#       Specify the output filename. Defaults to 'output.xlsx'
+# More details about this project can be found in the README file or at:
+#   https://github.com/qcjames53/AJM-RouteSummaries
 
-pass
+def GenerateSummary(ride_checks_filepath, route_info_filepath, 
+    output_filepath):
+
+    pass

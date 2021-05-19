@@ -5,6 +5,8 @@ A Python software solution for summarizing ridership statistics from bus routes.
 ## Using The Program
 This section of documentation is incomplete and will be updated as the program is developed.
 
+Currently, the program is launched by running the python script 'MainUI.py'.
+
 Note that this program has the following dependencies:
 * [Python 3.9.5](https://www.python.org/downloads/release/python-395/)
 * [openpyxl](https://openpyxl.readthedocs.io/en/stable/) - Install with 'pip install openpyxl'
@@ -135,5 +137,5 @@ Each route is prefaced by a row titled 'ONBOARD'. This row represents the total 
 #### Notes
 An additional sheet used to detail operational details which may affect the collected data. This data is manually added after workbook generation.
 
-## License
+## Project License
 This project is proprietary. Copyright 2021 by AJM & Associates LLC.
