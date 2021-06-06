@@ -10,7 +10,7 @@ from tkinter import messagebox
 import tkinter
 from tkinter.filedialog import asksaveasfilename
 from tkinter.filedialog import askopenfilename
-from datetime import date
+from datetime import date, datetime
 import webbrowser
 
 from TemplateGeneratorRideChecks import createTemplateRideChecks
@@ -18,7 +18,8 @@ from TemplateGeneratorRouteInfo import createTemplateRouteSummary
 from RouteSummaryGenerator import generateSummary
 
 # Constants
-DEFUALT_WINDOW_SIZE = "500x200"
+DEFAULT_WINDOW_WIDTH = 800
+DEFAULT_WINDOW_HEIGHT = 300
 REPO_URL = "https://github.com/qcjames53/AJM-RouteSummaries"
 DEFUALT_RIDECHECKS_PREFIX = "ridechecks"
 DEFAULT_ROUTE_INFO_PREFIX = "routeinfo"
@@ -31,6 +32,16 @@ def getDateString():
     @returns An ISO 8601 formatted date as a string.
     """
     return str(date.today())
+
+
+def getDateTimeString():
+    """
+    Helper function for getting the datetime as a string.
+
+    @returns An ISO 8601 formatted datetime as a string.
+    """
+    return str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
 
 
 class MainWindow(tkinter.Frame):
@@ -88,6 +99,15 @@ class MainWindow(tkinter.Frame):
             command=self.openRepository)
         menu.add_cascade(label="Help", menu=helpMenu)
 
+        # Create a scrolling debug/message log on the GUI application
+        self.log_text = tkinter.Text(self.master)
+        scroll_bar = tkinter.Scrollbar(self.master, command=self.log_text.yview)
+        self.log_text.config(yscrollcommand=scroll_bar.set)
+        scroll_bar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+        self.log_text.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
+        initial_log_message = getDateTimeString() + " - Application launched"
+        self.log_text.insert(tkinter.END, initial_log_message)
+
 
     def openRepository(self):
         """
@@ -109,7 +129,8 @@ class MainWindow(tkinter.Frame):
 
         @param message A string to display to the user
         """
-        messagebox.showinfo("Message", message)
+        message = getDateTimeString() + " - " + str(message)
+        self.log_text.insert(tkinter.END, "\n" + message)
 
     
     def createRideChecks(self):
@@ -134,8 +155,8 @@ class MainWindow(tkinter.Frame):
 
         # Write the file, alert the user
         createTemplateRideChecks(save_filepath)
-        self.applicationMessage("Successfully created the ride check template\
-             '" + save_filepath + "'")
+        self.applicationMessage("Successfully created the ride check template'"\
+            + save_filepath + "'")
 
     
     def createRouteInfo(self):
@@ -160,8 +181,8 @@ class MainWindow(tkinter.Frame):
 
         # Write the file, alert the user
         createTemplateRouteSummary(save_filepath)
-        self.applicationMessage("Successfully created the route info template\
-             '" + save_filepath + "'")
+        self.applicationMessage("Successfully created the route info template'"\
+            + save_filepath + "'")
 
 
     def setRideChecks(self):
@@ -248,11 +269,20 @@ class MainWindow(tkinter.Frame):
             return
 
         # Run the RouteSummaryGenerator utility and log
-        generateSummary(self.ride_checks_filepath, self.route_info_filepath, \
-            save_filepath)
-        self.applicationMessage("Successfully created the route summary\
-             '" + save_filepath + "'")
+        self.applicationMessage("Generating route summary...")
+        summary_generation_result = generateSummary(self.ride_checks_filepath, \
+            self.route_info_filepath, save_filepath)
         
+        # Console message for the correct result
+        if(summary_generation_result == 0):
+            self.applicationMessage("Successfully created the route summary '"\
+            + save_filepath + "'")
+        elif(summary_generation_result == 1):
+            self.applicationMessage("Major error. Check the workbook log for"\
+                " details.")
+        elif(summary_generation_result == 2):
+            self.applicationMessage("The program was unable to create the"\
+                " output workbook.")
 
 
 
@@ -260,5 +290,5 @@ class MainWindow(tkinter.Frame):
 root = tkinter.Tk()
 app = MainWindow(root)
 root.wm_title("Route Summaries Utility")
-root.geometry(DEFUALT_WINDOW_SIZE)
+root.geometry(str(DEFAULT_WINDOW_WIDTH) + "x" + str(DEFAULT_WINDOW_HEIGHT))
 root.mainloop()

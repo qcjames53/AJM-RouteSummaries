@@ -49,6 +49,19 @@ class Log:
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
     output_filepath):
+    """
+    Creates an output workbook from the provided input workbooks. See the README
+    for more information on how this function operates.
+
+    @param ride_checks_filepath The filepath for the ridechecks workbook
+    @param route_info_filepath The filepath for the route info workbook
+    @param output_filepath The filepath for the output workbook
+
+    @returns An integer representing the status of the output workbook:
+        0 - OK, success or minor errors
+        1 - Major error. Check the workbook log for details.
+        2 - Workbook could not be created.
+    """
 
     # Create output workbook / sheet
     wb = openpyxl.Workbook()
