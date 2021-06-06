@@ -40,7 +40,7 @@ def getDateTimeString():
 
     @returns An ISO 8601 formatted datetime as a string.
     """
-    return str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    return str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
 
@@ -281,8 +281,10 @@ class MainWindow(tkinter.Frame):
             self.applicationMessage("Major error. Check the workbook log for"\
                 " details.")
         elif(summary_generation_result == 2):
-            self.applicationMessage("The program was unable to create the"\
-                " output workbook.")
+            self.applicationMessage("Output workbook '" + save_filepath +\
+                "' could not be created.")
+        else:
+            self.applicationMessage("Unspecified error")
 
 
 

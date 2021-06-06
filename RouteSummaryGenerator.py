@@ -60,7 +60,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     @returns An integer representing the status of the output workbook:
         0 - OK, success or minor errors
         1 - Major error. Check the workbook log for details.
-        2 - Workbook could not be created.
+        2 - Output workbook could not be created
     """
 
     # Create output workbook / sheet
@@ -72,12 +72,45 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     log = Log(log_sheet)
     log.logMessage("Document created at " + str(datetime.datetime.now()))
 
-    # delay
-    for i in range(0, 1000000):
-        i += 1
-        i -= 1
+    # Try to open the ride checks file, if can't return major error
+    try:
+        ride_checks = openpyxl.load_workbook(filename=ride_checks_filepath)
+    except Exception as e:
+        log.logMessage("[ERROR] Could not open the ride checks workbook '" +\
+            ride_checks_filepath + "'")
+        
+        # Try to save the output file
+        try:
+            wb.save(output_filepath)
+        except Exception as e:
+            return 2
+        return 1
 
-    # Save the output file
+    # Try to open the route info file, if can't return major error
+    try:
+        route_info = openpyxl.load_workbook(filename=route_info_filepath)
+    except Exception as e:
+        log.logMessage("[ERROR] Could not open the route info workbook '" +\
+            route_info_filepath + "'")
+        
+        # Try to save the output file
+        try:
+            wb.save(output_filepath)
+        except Exception as e:
+            return 2
+        return 1
+
+    # start parsing the ride checks file
+    
+
     log.logMessage("Generation complete")
-    wb.save(output_filepath)
+
+    # Try to save the output file
+    try:
+        wb.save(output_filepath)
+    except Exception as e:
+        return 2
+
+    # Return successfully
+    return 0
     
