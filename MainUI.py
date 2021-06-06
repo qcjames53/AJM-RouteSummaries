@@ -13,15 +13,16 @@ from tkinter.filedialog import askopenfilename
 from datetime import date
 import webbrowser
 
-from TemplateGeneratorRideChecks import *
-from TemplateGeneratorRouteInfo import *
-from RouteSummaryGenerator import *
+from TemplateGeneratorRideChecks import createTemplateRideChecks
+from TemplateGeneratorRouteInfo import createTemplateRouteSummary
+from RouteSummaryGenerator import generateSummary
 
 # Constants
 DEFUALT_WINDOW_SIZE = "500x200"
 REPO_URL = "https://github.com/qcjames53/AJM-RouteSummaries"
 DEFUALT_RIDECHECKS_PREFIX = "ridechecks"
 DEFAULT_ROUTE_INFO_PREFIX = "routeinfo"
+DEFAULT_ROUTE_SUMMARY_PREFIX = "summary"
 
 def getDateString():
     """
@@ -79,7 +80,7 @@ class MainWindow(tkinter.Frame):
         menu.add_cascade(label="Template", menu=templateMenu)
 
         # Create Run Button
-        menu.add_command(label="Run")
+        menu.add_command(label="Run", command=self.runRouteSummary)
 
         # Create Help Menu
         helpMenu = tkinter.Menu(menu)
@@ -131,10 +132,8 @@ class MainWindow(tkinter.Frame):
         if save_filepath is None or save_filepath == "":
             return
 
-        # Write the file
+        # Write the file, alert the user
         createTemplateRideChecks(save_filepath)
-
-        # Alert that the file was created
         self.applicationMessage("Successfully created the ride check template\
              '" + save_filepath + "'")
 
@@ -159,10 +158,8 @@ class MainWindow(tkinter.Frame):
         if save_filepath is None or save_filepath == "":
             return
 
-        # Write the file
+        # Write the file, alert the user
         createTemplateRouteSummary(save_filepath)
-
-        # Alert that the file was created
         self.applicationMessage("Successfully created the route info template\
              '" + save_filepath + "'")
 
@@ -183,12 +180,10 @@ class MainWindow(tkinter.Frame):
             self.ride_checks_filepath = None
             return
         
-        # Set the member variable to the selected filepath
+        # Set the member variable to the selected filepath, alert the user
         self.ride_checks_filepath = filepath
-
-        # Alert the user
         self.applicationMessage("Selected ride checks file '" + \
-            filepath + "'")
+            self.ride_checks_filepath + "'")
 
 
     def setRouteInfo(self):
@@ -207,12 +202,57 @@ class MainWindow(tkinter.Frame):
             self.route_info_filepath = None
             return
         
-        # Set the member variable to the selected filepath
-        self.route_info_filepath = None
-        
-        # Alert the user
+        # Set the member variable to the selected filepath, alert the user
+        self.route_info_filepath = filepath
         self.applicationMessage("Selected route info file '" + \
-            filepath + "'")
+            self.route_info_filepath + "'")
+
+
+    def runRouteSummary(self):
+        """
+        Runs the route summary generator with the selected filepaths. Will
+        run setRideCheck and/or setRouteInfo if the respective filepaths have
+        not been set.
+        """
+        # Get the respective sheet filepaths if they haven't been selected
+        if self.ride_checks_filepath is None:
+            self.setRideChecks()
+
+            # check a valid filepath was submitted. If not, exit.
+            if self.ride_checks_filepath is None:
+                self.applicationMessage("Route summary generation was cancelled by the user.")
+                return
+        if self.route_info_filepath is None:
+            self.setRouteInfo()
+
+            # check a valid filepath was submitted. If not, exit.
+            if self.route_info_filepath is None:
+                self.applicationMessage("Route summary generation was cancelled by the user.")
+                return
+
+        # Ask where to save the generated sheet
+        # Get default filename
+        default_name = DEFAULT_ROUTE_SUMMARY_PREFIX + getDateString() + ".xlsx"
+
+        # Save-As dialog
+        save_filepath = asksaveasfilename(
+            title="Save Route Summary Workbook",
+            initialfile=default_name, 
+            defaultextension=".xlsx", 
+            filetypes=[("Excel Workbook", "*.xlsx")]
+        )
+
+        # Check for 'cancel', if true return
+        if save_filepath is None or save_filepath == "":
+            self.applicationMessage("Route summary generation was cancelled by the user.")
+            return
+
+        # Run the RouteSummaryGenerator utility and log
+        generateSummary(self.ride_checks_filepath, self.route_info_filepath, \
+            save_filepath)
+        self.applicationMessage("Successfully created the route summary\
+             '" + save_filepath + "'")
+        
 
 
 
