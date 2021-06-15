@@ -74,7 +74,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
 
     # Try to open the ride checks file, if can't return major error
     try:
-        ride_checks = openpyxl.load_workbook(filename=ride_checks_filepath)
+        ride_checks_wb = openpyxl.load_workbook(filename=ride_checks_filepath)
     except Exception as e:
         log.logMessage("[ERROR] Could not open the ride checks workbook '" +\
             ride_checks_filepath + "'")
@@ -85,10 +85,11 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         except Exception as e:
             return 2
         return 1
+    ride_checks = ride_checks_wb.active
 
     # Try to open the route info file, if can't return major error
     try:
-        route_info = openpyxl.load_workbook(filename=route_info_filepath)
+        route_info_wb = openpyxl.load_workbook(filename=route_info_filepath).active
     except Exception as e:
         log.logMessage("[ERROR] Could not open the route info workbook '" +\
             route_info_filepath + "'")
@@ -101,7 +102,28 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         return 1
 
     # start parsing the ride checks file
-    
+    current_row = 2
+    while(ride_checks.cell(row=current_row, column=1).value is not None):
+        print(str(current_row) + ": " + str(ride_checks.cell(row=current_row, column=1).value))
+
+        # get data
+        sequence = ride_checks.cell(row=current_row, column=1).value
+        date = ride_checks.cell(row=current_row, column=2).value
+        route = ride_checks.cell(row=current_row, column=3).value
+        direction = ride_checks.cell(row=current_row, column=4).value
+        run = ride_checks.cell(row=current_row, column=5).value
+        start_time = ride_checks.cell(row=current_row, column=6).value
+        onboard = ride_checks.cell(row=current_row, column=7).value
+        stop_number = ride_checks.cell(row=current_row, column=8).value
+        arrival_time = ride_checks.cell(row=current_row, column=9).value
+        schedule_time = ride_checks.cell(row=current_row, column=10).value
+        offs = ride_checks.cell(row=current_row, column=11).value
+        ons = ride_checks.cell(row=current_row, column=12).value
+        loads = ride_checks.cell(row=current_row, column=13).value
+        time_check = ride_checks.cell(row=current_row, column=14).value
+
+        # increment current row
+        current_row += 1
 
     log.logMessage("Generation complete")
 
