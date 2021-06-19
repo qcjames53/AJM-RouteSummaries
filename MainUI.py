@@ -155,8 +155,8 @@ class MainWindow(tkinter.Frame):
 
         # Write the file, alert the user
         createTemplateRideChecks(save_filepath)
-        self.applicationMessage("Successfully created the ride check template'"\
-            + save_filepath + "'")
+        self.applicationMessage("Successfully created the ride check template"\
+        + " '" + save_filepath + "'")
 
     
     def createRouteInfo(self):
@@ -181,8 +181,8 @@ class MainWindow(tkinter.Frame):
 
         # Write the file, alert the user
         createTemplateRouteSummary(save_filepath)
-        self.applicationMessage("Successfully created the route info template'"\
-            + save_filepath + "'")
+        self.applicationMessage("Successfully created the route info template"\
+            + " '" + save_filepath + "'")
 
 
     def setRideChecks(self):
