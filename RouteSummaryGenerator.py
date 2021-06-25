@@ -16,7 +16,7 @@ LOG_SHEET_TITLE = "Log"
 
 
 # Route direction enum
-class Direction(enum):
+class Direction(Enum):
     IB = "IB" # inbound
     OB = "OB" # outbound
     NB = "NB" # northbound
@@ -50,8 +50,19 @@ def routestringToRoute(routestring):
         [direction] - A Direction enum
     """
     route_no = int(routestring[2:])
-    
     dir_string = routestring[:2]
+    
+    # return route number and direction
+    return route_no, stringToDirection(dir_string)
+
+
+def stringToDirection(dir_string):
+    """
+    Converts a direction string to a direction enum
+
+    @param dir_string The string to convert
+    @returns Direction enum for the direction of this string
+    """
     direction = Direction.UN
     if dir_string == "IB":
         direction = Direction.IB
@@ -65,9 +76,7 @@ def routestringToRoute(routestring):
         direction = Direction.EB
     elif dir_string == "WB":
         direction = Direction.WB
-    
-    # return route number and direction
-    return route_no, direction
+    return direction
 
 
 class Log:
@@ -104,7 +113,7 @@ class Log:
         self.log_row += 1
 
     
-    def logWarning(self, message)
+    def logWarning(self, message):
         """
         Logs a warning to the log sheet.
 
@@ -113,7 +122,7 @@ class Log:
         self.logMessage("[WARNING] " + message)
 
 
-    def logError(self, message)
+    def logError(self, message):
         """
         Logs an error to the log sheet.
 
@@ -123,7 +132,7 @@ class Log:
 
 
 class RouteManager:
-    """
+    """ 
     A class that allows for easy storage of routes and their respective data
     """
 
@@ -135,8 +144,57 @@ class RouteManager:
         self.routes = {}
 
 
-    def addData(routestring, datetime, stop):
+    def __str__(self) -> str:
+        output = ""
+        for key in self.routes:
+            output += self.routes[key].__str__() + '\n'
+        return output
 
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+    def addData(self, routestring, datetime, stop_no):
+        # if the routestring key does not exist, create the route
+        if routestring not in self.routes:
+            self.routes[routestring] = Route(routestring)
+
+        # Add the data to the appropriate route
+        self.routes[routestring].addData(datetime, stop_no)
+
+
+class Route:
+    """
+    A class that allows for easy storage of the stops inside of a route
+    """
+    def __init__(self, routestring):
+        """
+        Initialize Route with the appropriate internal variables
+        """
+        self.routestring = routestring
+        self.departures = {}
+
+
+    def __str__(self) -> str:
+        output = ""
+        for key1 in self.departures:
+            for key2 in self.departures[key1]:
+                output += str(self.routestring) + " " + str(key1) + " "
+                output += str(key2) + ": " + str(self.departures[key1][key2])
+                output += "\n"
+        return output
+
+    
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    
+    def addData(self, datetime, stop_no):
+        if datetime not in self.departures:
+            self.departures[datetime] = {}
+
+        self.departures[datetime][stop_no] = "temp data"
 
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
@@ -155,8 +213,9 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         2 - Output workbook could not be created
     """
 
-    # Create output workbook / sheet
+    # Create output workbook / sheet. Set date format to ISO 8601
     wb = openpyxl.Workbook()
+    wb.iso_dates = True
 
     # Set up debug/message log
     log_sheet = wb.active
@@ -194,11 +253,10 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         return 1
 
     # start parsing the ride checks file
+    route_manager = RouteManager()
     current_row = 2
     prev_seq = 0
     while(ride_checks.cell(row=current_row, column=1).value is not None):
-        print(str(current_row) + ": " + str(ride_checks.cell(row=current_row, column=1).value))
-
         # get data
         sequence = ride_checks.cell(row=current_row, column=1).value
         date = ride_checks.cell(row=current_row, column=2).value
@@ -215,6 +273,43 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         loads = ride_checks.cell(row=current_row, column=13).value
         time_check = ride_checks.cell(row=current_row, column=14).value
 
+        # check that all required data is the proper type
+        if not isinstance(sequence, int):
+            log.logError("Row " + str(current_row) + ": Sequence '" + \
+                str(sequence) + "' is not an integer. Skipping row.")
+            current_row += 1
+            continue
+        if not isinstance(date, datetime.date):
+            log.logError("Row " + str(current_row) + ": Date '" + \
+                str(date) + "' is not an excel-formatted date. " + \
+                "Skipping row.")
+            current_row += 1
+            continue
+        if not isinstance(route, int):
+            log.logError("Row " + str(current_row) + ": Route '" + \
+                str(route) + "' is not an integer. Skipping row.")
+            current_row += 1
+            continue
+        if stringToDirection(direction) == Direction.UN:
+            log.logError("Row " + str(current_row) + ": Direction '" + \
+                str(direction) + "' is not a valid input. Skipping row.")
+            current_row += 1
+            continue
+        if (not isinstance(run, int)):
+            log.logError("Row " + str(current_row) + ": Run '" + \
+                str(run) + "' is not an integer. Skipping row.")
+            current_row += 1
+            continue
+        if (not isinstance(start_time, datetime.time)):
+            log.logError("Row " + str(current_row) + ": Start time '" + \
+                str(start_time) + "' is not an excel-formatted time. " + \
+                "Skipping row.")
+            current_row += 1
+            continue
+
+        # check that all optional data is the correct format if filled in
+
+
         # Check that the sequence number is in order, alert if not
         if sequence - 1 != prev_seq:
             log.logWarning("Out-of-order sequence number: Row " +
@@ -223,9 +318,14 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
 
         # add data to the route manager object
         # order of placement is route string -> date and time -> stop_number
+        routestring = routeToRoutestring(route, direction)
+        date_and_time = datetime.datetime.combine(date, start_time)
+        route_manager.addData(routestring, date_and_time, stop_number)
 
         # increment current row
         current_row += 1
+
+    print(route_manager)
 
     log.logMessage("Generation complete")
 

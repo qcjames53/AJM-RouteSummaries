@@ -270,6 +270,7 @@ class MainWindow(tkinter.Frame):
 
         # Run the RouteSummaryGenerator utility and log
         self.applicationMessage("Generating route summary...")
+        self.update()
         summary_generation_result = generateSummary(self.ride_checks_filepath, \
             self.route_info_filepath, save_filepath)
         
