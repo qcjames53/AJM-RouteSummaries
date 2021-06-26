@@ -155,13 +155,15 @@ class RouteManager:
         return self.__str__()
 
 
-    def addData(self, routestring, datetime, stop_no):
+    def addData(self, routestring, datetime, stop_no, arrival_time, \
+        schedule_time, offs, ons):
         # if the routestring key does not exist, create the route
         if routestring not in self.routes:
             self.routes[routestring] = Route(routestring)
 
         # Add the data to the appropriate route
-        self.routes[routestring].addData(datetime, stop_no)
+        self.routes[routestring].addData(datetime, stop_no, arrival_time,\
+            schedule_time, offs, ons)
 
 
 class Route:
@@ -190,11 +192,14 @@ class Route:
         return self.__str__()
 
     
-    def addData(self, datetime, stop_no):
+    def addData(self, datetime, stop_no, arrival_time, schedule_time, offs, \
+        ons):
+
         if datetime not in self.departures:
             self.departures[datetime] = {}
 
-        self.departures[datetime][stop_no] = "temp data"
+        self.departures[datetime][stop_no] = [arrival_time, schedule_time, \
+            offs, ons]
 
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
@@ -264,14 +269,20 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         direction = ride_checks.cell(row=current_row, column=4).value
         run = ride_checks.cell(row=current_row, column=5).value
         start_time = ride_checks.cell(row=current_row, column=6).value
-        onboard = ride_checks.cell(row=current_row, column=7).value
+        #onboard = ride_checks.cell(row=current_row, column=7).value
         stop_number = ride_checks.cell(row=current_row, column=8).value
         arrival_time = ride_checks.cell(row=current_row, column=9).value
         schedule_time = ride_checks.cell(row=current_row, column=10).value
         offs = ride_checks.cell(row=current_row, column=11).value
         ons = ride_checks.cell(row=current_row, column=12).value
-        loads = ride_checks.cell(row=current_row, column=13).value
-        time_check = ride_checks.cell(row=current_row, column=14).value
+        #loads = ride_checks.cell(row=current_row, column=13).value
+        #time_check = ride_checks.cell(row=current_row, column=14).value
+
+        # Check that the sequence number is in order, alert if not
+        if sequence - 1 != prev_seq:
+            log.logWarning("Out-of-order sequence number: Row " +
+            str(current_row))
+        prev_seq = sequence
 
         # check that all required data is the proper type
         if not isinstance(sequence, int):
@@ -308,19 +319,37 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
             continue
 
         # check that all optional data is the correct format if filled in
-
-
-        # Check that the sequence number is in order, alert if not
-        if sequence - 1 != prev_seq:
-            log.logWarning("Out-of-order sequence number: Row " +
-            str(current_row))
-        prev_seq = sequence
+        if (arrival_time is not None) and (not isinstance(arrival_time, \
+            datetime.time)):
+            log.logError("Row " + str(current_row) + ": Arrival time '" + \
+                str(arrival_time) + "' is not an excel-formatted time."\
+                + "Skipping row.")
+            current_row += 1
+            continue
+        if (schedule_time is not None) and (not isinstance(schedule_time, \
+            datetime.time)):
+            log.logError("Row " + str(current_row) + ": Scheduled time '" + \
+                str(schedule_time) + "' is not an excel-formatted time."\
+                + "Skipping row.")
+            current_row += 1
+            continue
+        if (ons is not None) and (not isinstance(ons, int)):
+            log.logError("Row " + str(current_row) + ": Ons value '" + \
+            str(ons) + "' is not an integer. Skipping row.")
+            current_row += 1
+            continue   
+        if (offs is not None) and (not isinstance(offs, int)):
+            log.logError("Row " + str(current_row) + ": Offs value '" + \
+            str(offs) + "' is not an integer. Skipping row.")
+            current_row += 1
+            continue           
 
         # add data to the route manager object
         # order of placement is route string -> date and time -> stop_number
         routestring = routeToRoutestring(route, direction)
         date_and_time = datetime.datetime.combine(date, start_time)
-        route_manager.addData(routestring, date_and_time, stop_number)
+        route_manager.addData(routestring, date_and_time, stop_number, \
+            arrival_time, schedule_time, offs, ons)
 
         # increment current row
         current_row += 1
