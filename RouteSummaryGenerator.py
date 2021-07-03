@@ -14,7 +14,6 @@ from enum import Enum
 # Constants
 LOG_SHEET_TITLE = "Log"
 
-
 # Route direction enum
 class Direction(Enum):
     IB = "IB" # inbound
@@ -24,7 +23,6 @@ class Direction(Enum):
     EB = "EB" # eastbound
     WB = "WB" # westbound
     UN = "UN" # unknown
-
 
 # Utility functions
 def routeToRoutestring(route_no, direction):
@@ -37,7 +35,6 @@ def routeToRoutestring(route_no, direction):
         [direction][route number]
     """
     return direction + str(route_no)
-
 
 def routestringToRoute(routestring):
     """
@@ -54,7 +51,6 @@ def routestringToRoute(routestring):
     
     # return route number and direction
     return route_no, stringToDirection(dir_string)
-
 
 def stringToDirection(dir_string):
     """
@@ -83,7 +79,6 @@ class Log:
     """
     A log used to display important messages to the end user.
     """
-
     def __init__(self, log_sheet):
         """
         Initialize the log with the proper local variables.
@@ -99,7 +94,6 @@ class Log:
         self.log_sheet.column_dimensions["B"].width = 200
         self.log_sheet["A1"] = "Elapsed time"
         self.log_sheet["B1"] = "Message"
-    
 
     def logMessage(self, message):
         """
@@ -112,7 +106,6 @@ class Log:
         self.log_sheet["B" + str(self.log_row)] = message
         self.log_row += 1
 
-    
     def logWarning(self, message):
         """
         Logs a warning to the log sheet.
@@ -120,7 +113,6 @@ class Log:
         @param message A string representing the message to log.
         """
         self.logMessage("[WARNING] " + message)
-
 
     def logError(self, message):
         """
@@ -135,7 +127,6 @@ class RouteManager:
     """ 
     A class that allows for easy storage of routes and their respective data
     """
-
     def __init__(self):
         """
         Initilize RouteManager with the appropriate internal variables
@@ -143,17 +134,14 @@ class RouteManager:
         # A map of routes from routestring to route object
         self.routes = {}
 
-
     def __str__(self) -> str:
         output = ""
         for key in self.routes:
             output += self.routes[key].__str__() + '\n'
         return output
 
-
     def __repr__(self) -> str:
         return self.__str__()
-
 
     def addData(self, routestring, datetime, stop_no, arrival_time, \
         schedule_time, offs, ons):
@@ -164,6 +152,11 @@ class RouteManager:
         # Add the data to the appropriate route
         self.routes[routestring].addData(datetime, stop_no, arrival_time,\
             schedule_time, offs, ons)
+
+    def buildRouteTotals(self, worksheet):
+        for routestring in self.routes:
+            # TODO fill in this section
+            pass
 
 
 class Route:
@@ -176,7 +169,7 @@ class Route:
         """
         self.routestring = routestring
         self.departures = {}
-
+        self.descriptor = "Temp Descriptor"
 
     def __str__(self) -> str:
         output = ""
@@ -187,11 +180,9 @@ class Route:
                 output += "\n"
         return output
 
-    
     def __repr__(self) -> str:
         return self.__str__()
 
-    
     def addData(self, datetime, stop_no, arrival_time, schedule_time, offs, \
         ons):
 
@@ -200,6 +191,19 @@ class Route:
 
         self.departures[datetime][stop_no] = [arrival_time, schedule_time, \
             offs, ons]
+
+    def getDescriptor(self) -> str:
+        return self.descriptor
+
+    def getTotals(self):
+        offs = 0
+        ons = 0
+        for datetime in self.departures:
+            for stop_no in self.departures[datetime]:
+                offs += self.departures[datetime][stop_no][2]
+                ons += self.departures[datetime][stop_no][3]
+        total = offs + ons
+        return offs, ons, total
 
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
@@ -354,7 +358,10 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         # increment current row
         current_row += 1
 
-    print(route_manager)
+    # Generate route totals sheet
+    log.logMessage("Generating route totals")
+    routeTotalsSheet = wb.create_sheet("Rte Totals")
+    route_manager.buildRouteTotals(routeTotalsSheet)
 
     log.logMessage("Generation complete")
 
