@@ -144,7 +144,18 @@ class RouteManager:
         return self.__str__()
 
     def addData(self, routestring, datetime, stop_no, arrival_time, \
-        schedule_time, offs, ons):
+        schedule_time, offs, ons) -> None:
+        """
+        Adds data to the appropriate internal route object
+
+        @param routestring The routestring representing the route
+        @param datetime The datetime the route began
+        @param stop_no The stop number
+        @param arrival_time The arrival time of the stop
+        @param schedule_time The scheduled arrival time of the stop
+        @param offs The number of passengers departing the bus
+        @param ons The number of passengers boarding the bus
+        """
         # if the routestring key does not exist, create the route
         if routestring not in self.routes:
             self.routes[routestring] = Route(routestring)
@@ -153,10 +164,24 @@ class RouteManager:
         self.routes[routestring].addData(datetime, stop_no, arrival_time,\
             schedule_time, offs, ons)
 
-    def buildRouteTotals(self, worksheet):
+    def buildRouteTotals(self, worksheet, log:Log):
+        """
+        Builds a worksheet of route totals. See the README file for further description regarding this functionality.
+
+        @param worksheet The excel worksheet to operate on
+        @param log The log file to output to
+        """
+        current_row = 1
         for routestring in self.routes:
-            # TODO fill in this section
-            pass
+            offs, ons, total = self.routes[routestring].getTotals(log)
+            worksheet.cell(row=current_row, column=1).value = routestring
+            worksheet.cell(row=current_row, column=2).value = \
+                self.routes[routestring].descriptor
+            worksheet.cell(row=current_row, column=3).value = offs
+            worksheet.cell(row=current_row, column=4).value = ons
+            worksheet.cell(row=current_row, column=5).value = total
+
+            current_row += 1
 
 
 class Route:
@@ -195,13 +220,22 @@ class Route:
     def getDescriptor(self) -> str:
         return self.descriptor
 
-    def getTotals(self):
+    def getTotals(self, log:Log):
+        """
+        @returns the total offs, ons, and total passengers for this route over 
+            all stops
+        """
         offs = 0
         ons = 0
         for datetime in self.departures:
             for stop_no in self.departures[datetime]:
-                offs += self.departures[datetime][stop_no][2]
-                ons += self.departures[datetime][stop_no][3]
+                current_off = self.departures[datetime][stop_no][2]
+                current_on = self.departures[datetime][stop_no][3]
+
+                if current_off is not None:
+                    offs += current_off
+                if current_on is not None:
+                    ons += current_on
         total = offs + ons
         return offs, ons, total
 
@@ -361,7 +395,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     # Generate route totals sheet
     log.logMessage("Generating route totals")
     routeTotalsSheet = wb.create_sheet("Rte Totals")
-    route_manager.buildRouteTotals(routeTotalsSheet)
+    route_manager.buildRouteTotals(routeTotalsSheet, log)
 
     log.logMessage("Generation complete")
 

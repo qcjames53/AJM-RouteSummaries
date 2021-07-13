@@ -12,6 +12,7 @@ from tkinter.filedialog import asksaveasfilename
 from tkinter.filedialog import askopenfilename
 from datetime import date, datetime
 import webbrowser
+import traceback
 
 from TemplateGeneratorRideChecks import createTemplateRideChecks
 from TemplateGeneratorRouteInfo import createTemplateRouteSummary
@@ -271,21 +272,27 @@ class MainWindow(tkinter.Frame):
         # Run the RouteSummaryGenerator utility and log
         self.applicationMessage("Generating route summary...")
         self.update()
-        summary_generation_result = generateSummary(self.ride_checks_filepath, \
-            self.route_info_filepath, save_filepath)
-        
-        # Console message for the correct result
-        if(summary_generation_result == 0):
-            self.applicationMessage("Successfully created the route summary '"\
-            + save_filepath + "'")
-        elif(summary_generation_result == 1):
-            self.applicationMessage("Major error. Check the workbook log for"\
-                " details.")
-        elif(summary_generation_result == 2):
-            self.applicationMessage("Output workbook '" + save_filepath +\
-                "' could not be created.")
-        else:
-            self.applicationMessage("Unspecified error")
+        try:
+            summary_generation_result = generateSummary( \
+                self.ride_checks_filepath, self.route_info_filepath, \
+                save_filepath)
+            # Console message for the correct result
+            if(summary_generation_result == 0):
+                self.applicationMessage("Successfully created the route summary '"\
+                + save_filepath + "'")
+            elif(summary_generation_result == 1):
+                self.applicationMessage("Major error. Check the workbook log for"\
+                    " details.")
+            elif(summary_generation_result == 2):
+                self.applicationMessage("Output workbook '" + save_filepath +\
+                    "' could not be created.")
+            else:
+                self.applicationMessage("Unspecified error")
+
+        except:
+            self.applicationMessage("Summary generation failed.")
+            print(traceback.format_exc())
+
 
 
 
