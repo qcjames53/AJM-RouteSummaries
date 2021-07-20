@@ -100,12 +100,13 @@ class RouteManager:
     """ 
     A class that allows for easy storage of routes and their respective data
     """
-    def __init__(self):
+    def __init__(self, log:Log):
         """
         Initilize RouteManager with the appropriate internal variables
         """
         # A map of routes from routestring to route object
         self.routes = {}
+        self.log = log
 
     def __str__(self) -> str:
         output = ""
@@ -116,7 +117,15 @@ class RouteManager:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addData(self, route, datetime, stop_no, arrival_time, \
+    def addStop(self, route, stop_no, street, cross_street):
+        # if the route key does not exist, create the route
+        if route not in self.routes:
+            self.routes[route] = Route(route, self.log)
+        
+        # Add the stop to the appropriate route
+        self.routes[route].addStop(stop_no, street, cross_street)
+
+    def addData(self, route, stop_no, datetime, arrival_time, \
         schedule_time, offs, ons) -> None:
         """
         Adds data to the appropriate internal route object
@@ -129,15 +138,16 @@ class RouteManager:
         @param offs The number of passengers departing the bus
         @param ons The number of passengers boarding the bus
         """
-        # if the routestring key does not exist, create the route
+        # If the route does not exist, log an error and return
         if route not in self.routes:
-            self.routes[route] = Route(route)
+            self.log.logError("Tried to add data to nonexistent route: " + str(route))
+            return
 
         # Add the data to the appropriate route
-        self.routes[route].addData(datetime, stop_no, arrival_time,\
+        self.routes[route].addData(stop_no, datetime, arrival_time,\
             schedule_time, offs, ons)
 
-    def buildRouteTotals(self, worksheet, log:Log) -> None:
+    def buildRouteTotals(self, worksheet) -> None:
         """
         Builds a worksheet of route totals. See the README file for further description regarding this functionality.
 
@@ -154,7 +164,7 @@ class RouteManager:
         # Display values
         current_row = 2
         for route in self.routes:
-            offs, ons, total = self.routes[route].getTotals(log)
+            offs, ons, total = self.routes[route].getTotals()
             worksheet.cell(row=current_row, column=1).value = route
             worksheet.cell(row=current_row, column=2).value = \
                 self.routes[route].descriptor
@@ -164,7 +174,7 @@ class RouteManager:
 
             current_row += 1
 
-    def buildMaxLoads(self, worksheet, log:Log) -> None:
+    def buildMaxLoads(self, worksheet) -> None:
         """
         Builds a worksheet of max loads for each route. See the README file for 
         further description regarding this functionality.
@@ -184,50 +194,52 @@ class RouteManager:
         current_row = 2
         for route in self.routes:
             current_row = self.routes[route].buildTotalsByTime(worksheet,\
-            current_row, log)
-
-
-
-
+            current_row)
 
 
 class Route:
     """
     A class that allows for easy storage of the stops inside of a route
     """
-    def __init__(self, route):
+    def __init__(self, route, log:Log):
         """
         Initialize Route with the appropriate internal variables
         """
         self.route = route
-        self.departures = {}
+        self.stops = {}
         self.descriptor = "Temp Descriptor"
+        self.log = log
 
     def __str__(self) -> str:
         output = ""
-        for key1 in self.departures:
-            for key2 in self.departures[key1]:
-                output += str(self.route) + " " + str(key1) + " "
-                output += str(key2) + ": " + str(self.departures[key1][key2])
-                output += "\n"
+        for key in self.stops:
+            output += str(self.stops[key])
         return output
 
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addData(self, datetime, stop_no, arrival_time, schedule_time, offs, \
+    def addStop(self, stop_no, street, cross_street):
+        # If stop exists, throw error and return
+        if stop_no in self.stops:
+            self.log.logError("Tried to add stop " + str(stop_no) + " to route " + str(self.route) + " when it already exists.")
+            return
+
+        self.stops[stop_no] = Stop(self.route, stop_no, street, cross_street)
+
+    def addData(self, stop_no, datetime, arrival_time, schedule_time, offs, \
         ons):
+        # If stop_no does not exist, throw error and return
+        if stop_no not in self.stops:
+            self.log.logError("Tried to add data to stop " + str(stop_no) + " in route " + str(self.route) + " when stop does not exist.")
+            return
 
-        if datetime not in self.departures:
-            self.departures[datetime] = {}
-
-        self.departures[datetime][stop_no] = [arrival_time, schedule_time, \
-            offs, ons]
+        self.stops[stop_no].addData(datetime, arrival_time, schedule_time, offs, ons)
 
     def getDescriptor(self) -> str:
         return self.descriptor
 
-    def getTotals(self, log:Log):
+    def getTotals(self):
         """
         @returns the total offs, ons, and total passengers for this route over 
             all stops
@@ -246,7 +258,7 @@ class Route:
         total = offs + ons
         return offs, ons, total
 
-    def buildTotalsByTime(self, worksheet, current_row, log:Log):
+    def buildTotalsByTime(self, worksheet, current_row):
         for datetime in self.departures:
             # Generate the totals per datetime
             offs = 0
@@ -284,6 +296,29 @@ class Route:
             current_row += 1
         return current_row
 
+
+class Stop:
+    def __init__(self, route, stop_no, street, cross_street) -> None:
+        self.route = route
+        self.stop_no = stop_no
+        self.street = street
+        self.cross_street = cross_street
+        self.data = []
+
+    def __str__(self) -> str:
+        output = self.route + ": " + str(self.stop_no) + " [" + self.street + \
+            "/" + self.cross_street + "]\n"
+        for d in self.data:
+            output += str(d[0]) + " " + str(d[1]) + " " + str(d[2]) + " " + str(d[3]) + " " + str(d[4]) + "\n"
+        output += "\n"
+        return output
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def addData(self, datetime, arrival_time, schedule_time, offs, ons):
+        self.data.append([datetime, arrival_time, schedule_time, offs, ons])
+        
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
     output_filepath):
@@ -341,7 +376,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         return 1
 
     # parse the route info file to create route names and times
-    route_manager = RouteManager()
+    route_manager = RouteManager(log)
 
     # start parsing the ride checks file
     current_row = 2
@@ -441,12 +476,12 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     # Generate route totals sheet
     log.logMessage("Generating route totals")
     routeTotalsSheet = wb.create_sheet("Rte Totals")
-    route_manager.buildRouteTotals(routeTotalsSheet, log)
+    route_manager.buildRouteTotals(routeTotalsSheet)
 
     # Generate max load sheet
     log.logMessage("Generating max load sheet")
     maxLoadSheet = wb.create_sheet("Max Load")
-    route_manager.buildMaxLoads(maxLoadSheet, log)
+    route_manager.buildMaxLoads(maxLoadSheet)
 
     log.logMessage("Generation complete")
 
