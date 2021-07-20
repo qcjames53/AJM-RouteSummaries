@@ -164,7 +164,7 @@ class RouteManager:
         # Display values
         current_row = 2
         for route in self.routes:
-            offs, ons, total = self.routes[route].getTotals()
+            offs, ons, total = self.routes[route].getTotalOffsAndOns()
             worksheet.cell(row=current_row, column=1).value = route
             worksheet.cell(row=current_row, column=2).value = \
                 self.routes[route].descriptor
@@ -207,6 +207,7 @@ class Route:
         """
         self.route = route
         self.stops = {}
+        self.times = []
         self.descriptor = "Temp Descriptor"
         self.log = log
 
@@ -234,46 +235,40 @@ class Route:
             self.log.logError("Tried to add data to stop " + str(stop_no) + " in route " + str(self.route) + " when stop does not exist.")
             return
 
+        # If datetime does not exist, add it to datetimes and sort
+        if datetime not in self.times:
+            self.times.append(datetime)
+            self.times.sort()
+
         self.stops[stop_no].addData(datetime, arrival_time, schedule_time, offs, ons)
 
     def getDescriptor(self) -> str:
         return self.descriptor
 
-    def getTotals(self):
+    def getTotalOffsAndOns(self):
         """
         @returns the total offs, ons, and total passengers for this route over 
             all stops
         """
         offs = 0
         ons = 0
-        for datetime in self.departures:
-            for stop_no in self.departures[datetime]:
-                current_off = self.departures[datetime][stop_no][2]
-                current_on = self.departures[datetime][stop_no][3]
-
-                if current_off is not None:
-                    offs += current_off
-                if current_on is not None:
-                    ons += current_on
+        for stop_no in self.stops:
+            current_off, current_on = self.stops[stop_no].getTotalOffsAndOns()
+            offs += current_off
+            ons += current_on
         total = offs + ons
         return offs, ons, total
 
     def buildTotalsByTime(self, worksheet, current_row):
-        for datetime in self.departures:
+        for datetime in self.times:
             # Generate the totals per datetime
             offs = 0
             ons = 0
             current_load = 0
             max_load = 0
-            for stop_no in self.departures[datetime]:
-                current_off = self.departures[datetime][stop_no][2]
-                current_on = self.departures[datetime][stop_no][3]
-
-                # Clean input data
-                if current_off is None:
-                    current_off = 0
-                if current_on is None:
-                    current_on = 0
+            for stop_no in self.stops:
+                current_off, current_on = \
+                    self.stops[stop_no].getOffsAndOns(datetime)
 
                 # Add to tallies
                 offs += current_off
@@ -303,13 +298,13 @@ class Stop:
         self.stop_no = stop_no
         self.street = street
         self.cross_street = cross_street
-        self.data = []
+        self.data = {}
 
     def __str__(self) -> str:
         output = self.route + ": " + str(self.stop_no) + " [" + self.street + \
             "/" + self.cross_street + "]\n"
-        for d in self.data:
-            output += str(d[0]) + " " + str(d[1]) + " " + str(d[2]) + " " + str(d[3]) + " " + str(d[4]) + "\n"
+        for datetime in self.data:
+            output += str(datetime) + " " + str(self.data[datetime][0]) + " " + str(self.data[datetime][1]) + " " + str(self.data[datetime][2]) + " " + str(self.data[datetime][3]) + "\n"
         output += "\n"
         return output
 
@@ -317,7 +312,22 @@ class Stop:
         return self.__str__()
 
     def addData(self, datetime, arrival_time, schedule_time, offs, ons):
-        self.data.append([datetime, arrival_time, schedule_time, offs, ons])
+        self.data[datetime] = [arrival_time, schedule_time, offs, ons]
+
+    def getOffsAndOns(self, datetime):
+        # If datetime does not exist, return zeros
+        if datetime not in self.data:
+            return 0, 0
+
+        return self.data[datetime][2], self.data[datetime][3]
+
+    def getTotalOffsAndOns(self):
+        total_offs = 0
+        total_ons = 0
+        for datetime in self.data:
+            total_offs += self.data[datetime][2]
+            total_ons += self.data[datetime][3]
+        return total_offs, total_ons
         
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
