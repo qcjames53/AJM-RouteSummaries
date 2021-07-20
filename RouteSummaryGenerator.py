@@ -103,6 +103,8 @@ class RouteManager:
     def __init__(self, log:Log):
         """
         Initilize RouteManager with the appropriate internal variables
+        
+        @param log The log object in the currect workbook
         """
         # A map of routes from routestring to route object
         self.routes = {}
@@ -118,6 +120,14 @@ class RouteManager:
         return self.__str__()
 
     def addStop(self, route, stop_no, street, cross_street):
+        """
+        Adds a stop to the specified route object.
+        
+        @param route The route with which to add the stop
+        @param stop_no The stop number to add
+        @param street The main street for the stop
+        @param cross_street The cross street for the stop
+        """
         # if the route key does not exist, create the route
         if route not in self.routes:
             self.routes[route] = Route(route, self.log)
@@ -128,11 +138,11 @@ class RouteManager:
     def addData(self, route, stop_no, datetime, arrival_time, \
         schedule_time, offs, ons) -> None:
         """
-        Adds data to the appropriate internal route object
+        Adds data about a stop to the specified route object
 
-        @param route A number representing the route
-        @param datetime The datetime the route began
+        @param route The route with which to add the stop
         @param stop_no The stop number
+        @param datetime The datetime the route began
         @param arrival_time The arrival time of the stop
         @param schedule_time The scheduled arrival time of the stop
         @param offs The number of passengers departing the bus
@@ -148,6 +158,13 @@ class RouteManager:
             schedule_time, offs, ons)
 
     def setRouteData(self, route, description, direction: Direction):
+        """
+        Sets the metadata of a particular route.
+        
+        @param route The number of the route
+        @param description A text description of the route (University, Uptown)
+        @param direction The direction of the route as a Direction object
+        """
         # if the route key does not exist, create the route
         if route not in self.routes:
             self.routes[route] = Route(route, self.log)
@@ -160,7 +177,6 @@ class RouteManager:
         Builds a worksheet of route totals. See the README file for further description regarding this functionality.
 
         @param worksheet The excel worksheet to operate on
-        @param log The log file to output to
         """
         # Display headers
         worksheet["A1"] = "Route No."
@@ -188,7 +204,6 @@ class RouteManager:
         further description regarding this functionality.
 
         @param worksheet The excel worksheet to operate on
-        @param log The log file to output to
         """
         # Display headers
         worksheet["A1"] = "Route No."
@@ -212,6 +227,9 @@ class Route:
     def __init__(self, route, log:Log):
         """
         Initialize Route with the appropriate internal variables
+        
+        @param route The route number
+        @param log The workbook's log object
         """
         self.route = route
         self.stops = {}
@@ -230,6 +248,13 @@ class Route:
         return self.__str__()
 
     def addStop(self, stop_no, street, cross_street):
+        """
+        Adds a stop of stop_no to this route
+        
+        @param stop_no The number of the stop.
+        @param street The main street of this stop.
+        @param cross_street The main cross street of this stop.
+        """
         # If stop exists, throw error and return
         if stop_no in self.stops:
             self.log.logError("Tried to add stop " + str(stop_no) + " to route " + str(self.route) + " when it already exists.")
@@ -239,6 +264,16 @@ class Route:
 
     def addData(self, stop_no, datetime, arrival_time, schedule_time, offs, \
         ons):
+        """
+        Adds data about a stop to a specific stop object
+        
+        @param stop_no The stop number where we're adding this data
+        @param datetime The datetime when the route began
+        @param arrival_time Optional: The arrival time for this stop
+        @param schedule_time Optional: The scheduled arrival time for this stop
+        @param offs Optional: The number of passengers departing the bus
+        @param ons Optional: The number of passengers boarding the bus
+        """
         # If stop_no does not exist, throw error and return
         if stop_no not in self.stops:
             self.log.logError("Tried to add data to stop " + str(stop_no) + " in route " + str(self.route) + " when stop does not exist.")
@@ -252,10 +287,19 @@ class Route:
         self.stops[stop_no].addData(datetime, arrival_time, schedule_time, offs, ons)
 
     def setRouteData(self, description, direction: Direction):
+        """
+        Sets the metadata for this route
+        
+        @param description A text description of the route (University, Uptown)
+        @param direction The direction of the route as a Direction object
+        """
         self.descriptor = description
         self.direction = direction
 
     def getDescriptorAndDirection(self) -> str:
+        """
+        @returns A string representation of this routes descriptor and direction
+        """
         return self.descriptor + " " + str(self.direction.value)
 
     def getTotalOffsAndOns(self):
@@ -273,6 +317,12 @@ class Route:
         return offs, ons, total
 
     def buildTotalsByTime(self, worksheet, current_row):
+        """
+        Output totals for every time of every route into a provided workbook
+        
+        @param worksheet The workbook to output to
+        @param current_row The row of the worksheet to start on
+        """
         self.times.sort()
         for datetime in self.times:
             # Generate the totals per datetime
@@ -307,7 +357,18 @@ class Route:
 
 
 class Stop:
+    """
+    A class that represents a single stop on a bus route
+    """
     def __init__(self, route, stop_no, street, cross_street) -> None:
+        """
+        Initialize with metadata
+        
+        @param route The route number this stop sits on
+        @param stop_no The stop number of this stop
+        @param street The main street of this stop
+        @param cross_street The cross street of this stop
+        """
         self.route = route
         self.stop_no = stop_no
         self.street = street
@@ -326,6 +387,15 @@ class Stop:
         return self.__str__()
 
     def addData(self, datetime, arrival_time, schedule_time, offs, ons):
+        """
+        Add data from a certain run to this stop
+        
+        @param datetime The datetime when this route begain
+        @param arrival_time Optional: The arrival time for this stop
+        @param schedule_time Optional: The scheduled arrival time for this stop
+        @param offs Optional: The number of passengers departing the bus
+        @param ons Optional: The number of passengers boarding the bus
+        """
         # Clean input data
         if not (isinstance(offs, int) and offs >= 0):
             offs = 0
@@ -335,6 +405,9 @@ class Stop:
         self.data[datetime] = [arrival_time, schedule_time, offs, ons]
 
     def getOffsAndOns(self, datetime):
+        """
+        @returns the offs and ons for a specific datetime
+        """
         # If datetime does not exist, return zeros
         if datetime not in self.data:
             return 0, 0
@@ -342,6 +415,9 @@ class Stop:
         return self.data[datetime][2], self.data[datetime][3]
 
     def getTotalOffsAndOns(self):
+        """
+        @returns the total offs and ons for all datetimes at this stop
+        """
         total_offs = 0
         total_ons = 0
         for datetime in self.data:
