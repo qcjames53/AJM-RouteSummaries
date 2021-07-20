@@ -110,7 +110,7 @@ class RouteManager:
 
     def __str__(self) -> str:
         output = ""
-        for key in self.routes:
+        for key in sorted(self.routes.keys()):
             output += self.routes[key].__str__() + '\n'
         return output
 
@@ -147,6 +147,14 @@ class RouteManager:
         self.routes[route].addData(stop_no, datetime, arrival_time,\
             schedule_time, offs, ons)
 
+    def setRouteData(self, route, description, direction: Direction):
+        # if the route key does not exist, create the route
+        if route not in self.routes:
+            self.routes[route] = Route(route, self.log)
+
+        # Add data to appropriate route
+        self.routes[route].setRouteData(description, direction)
+
     def buildRouteTotals(self, worksheet) -> None:
         """
         Builds a worksheet of route totals. See the README file for further description regarding this functionality.
@@ -163,11 +171,11 @@ class RouteManager:
         
         # Display values
         current_row = 2
-        for route in self.routes:
+        for route in sorted(self.routes.keys()):
             offs, ons, total = self.routes[route].getTotalOffsAndOns()
             worksheet.cell(row=current_row, column=1).value = route
             worksheet.cell(row=current_row, column=2).value = \
-                self.routes[route].descriptor
+                self.routes[route].getDescriptorAndDirection()
             worksheet.cell(row=current_row, column=3).value = offs
             worksheet.cell(row=current_row, column=4).value = ons
             worksheet.cell(row=current_row, column=5).value = total
@@ -192,7 +200,7 @@ class RouteManager:
 
         # Display values
         current_row = 2
-        for route in self.routes:
+        for route in sorted(self.routes.keys()):
             current_row = self.routes[route].buildTotalsByTime(worksheet,\
             current_row)
 
@@ -208,12 +216,13 @@ class Route:
         self.route = route
         self.stops = {}
         self.times = []
-        self.descriptor = "Temp Descriptor"
+        self.descriptor = "Descriptor Unset"
+        self.direction = Direction.UN
         self.log = log
 
     def __str__(self) -> str:
         output = ""
-        for key in self.stops:
+        for key in sorted(self.stops.keys()):
             output += str(self.stops[key])
         return output
 
@@ -242,8 +251,12 @@ class Route:
 
         self.stops[stop_no].addData(datetime, arrival_time, schedule_time, offs, ons)
 
-    def getDescriptor(self) -> str:
-        return self.descriptor
+    def setRouteData(self, description, direction: Direction):
+        self.descriptor = description
+        self.direction = direction
+
+    def getDescriptorAndDirection(self) -> str:
+        return self.descriptor + " " + str(self.direction.value)
 
     def getTotalOffsAndOns(self):
         """
@@ -260,6 +273,7 @@ class Route:
         return offs, ons, total
 
     def buildTotalsByTime(self, worksheet, current_row):
+        self.times.sort()
         for datetime in self.times:
             # Generate the totals per datetime
             offs = 0
@@ -301,9 +315,9 @@ class Stop:
         self.data = {}
 
     def __str__(self) -> str:
-        output = self.route + ": " + str(self.stop_no) + " [" + self.street + \
-            "/" + self.cross_street + "]\n"
-        for datetime in self.data:
+        output = str(self.route) + ": " + str(self.stop_no) + " [" + \
+            str(self.street) + "/" + str(self.cross_street) + "]\n"
+        for datetime in sorted(self.data.keys()):
             output += str(datetime) + " " + str(self.data[datetime][0]) + " " + str(self.data[datetime][1]) + " " + str(self.data[datetime][2]) + " " + str(self.data[datetime][3]) + "\n"
         output += "\n"
         return output
@@ -312,6 +326,12 @@ class Stop:
         return self.__str__()
 
     def addData(self, datetime, arrival_time, schedule_time, offs, ons):
+        # Clean input data
+        if not (isinstance(offs, int) and offs >= 0):
+            offs = 0
+        if not (isinstance(ons, int) and ons >= 0):
+            ons = 0
+
         self.data[datetime] = [arrival_time, schedule_time, offs, ons]
 
     def getOffsAndOns(self, datetime):
@@ -373,7 +393,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
 
     # Try to open the route info file, if can't return major error
     try:
-        route_info_wb = openpyxl.load_workbook(filename=route_info_filepath).active
+        route_info_wb = openpyxl.load_workbook(filename=route_info_filepath)
     except Exception as e:
         log.logMessage("[ERROR] Could not open the route info workbook '" +\
             route_info_filepath + "'")
@@ -384,9 +404,38 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         except Exception as e:
             return 2
         return 1
+    route_info = route_info_wb.worksheets[0]
+
+    route_manager = RouteManager(log)
 
     # parse the route info file to create route names and times
-    route_manager = RouteManager(log)
+    current_route = None
+    current_direction = None
+    current_route_name = None
+
+    for current_row in range(1,route_info.max_row + 1):
+        # Check for new route header
+        if route_info.cell(row=current_row, column=8).value == "ROUTE":
+            # Get info of the new route
+            current_route = route_info.cell(row=current_row, column=10).value
+            current_route_name = \
+                route_info.cell(row=current_row, column=4).value
+            current_direction = stringToDirection(
+                route_info.cell(row=current_row + 1, column=10).value)
+
+            # Set the route data
+            route_manager.setRouteData(current_route, current_route_name, current_direction)
+
+        # If current route is None, skip this row
+        if current_route is None:
+            continue
+
+        # If stop number is numberical, add this row
+        stop_no = route_info.cell(row=current_row, column=5).value
+        if isinstance(stop_no, int):
+            street = route_info.cell(row=current_row, column=3).value
+            cross_street = route_info.cell(row=current_row, column=4).value
+            route_manager.addStop(current_route, stop_no, street, cross_street)
 
     # start parsing the ride checks file
     current_row = 2
@@ -477,11 +526,14 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         # add data to the route manager object
         # order of placement is route string -> date and time -> stop_number
         date_and_time = datetime.datetime.combine(date, start_time)
-        route_manager.addData(route, date_and_time, stop_number, \
+        route_manager.addData(route, stop_number, start_time, \
             arrival_time, schedule_time, offs, ons)
 
         # increment current row
         current_row += 1
+
+    # DEBUG - Print all routes & stops & data
+    # print(str(route_manager))
 
     # Generate route totals sheet
     log.logMessage("Generating route totals")
