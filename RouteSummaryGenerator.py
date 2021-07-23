@@ -172,6 +172,13 @@ class RouteManager:
         # Add data to appropriate route
         self.routes[route].setRouteData(description, direction)
 
+    def buildLoad(self) -> None:
+        """
+        Builds and saves the loads for all routes
+        """
+        for route in self.routes:
+            self.routes[route].buildLoad()
+
     def buildRouteTotals(self, worksheet) -> None:
         """
         Builds a worksheet of route totals. See the README file for further description regarding this functionality.
@@ -317,6 +324,18 @@ class Route:
         for stop_no in self.stops:
             self.stops[stop_no].setRouteData(description, direction)
 
+    def buildLoad(self) -> None:
+        """
+        Builds and saves the loads for all data points within this route
+        """
+        for datetime in self.times:
+            current_load = 0
+            for stop_no in self.stops:
+                current_off, current_on = \
+                    self.stops[stop_no].getOffsAndOns(datetime)
+                current_load = current_load + current_on - current_off
+                self.stops[stop_no].setLoad(datetime, current_load)
+
     def getDescriptorAndDirection(self) -> str:
         """
         @returns A string representation of this routes descriptor and direction
@@ -344,7 +363,6 @@ class Route:
         @param worksheet The workbook to output to
         @param current_row The row of the worksheet to start on
         """
-        self.times.sort()
         for datetime in self.times:
             # Generate the totals per datetime
             offs = 0
@@ -352,13 +370,12 @@ class Route:
             current_load = 0
             max_load = 0
             for stop_no in self.stops:
-                current_off, current_on = \
-                    self.stops[stop_no].getOffsAndOns(datetime)
+                current_off, current_on, current_load = \
+                    self.stops[stop_no].getOffsOnsAndLoad(datetime)
 
                 # Add to tallies
                 offs += current_off
                 ons += current_on
-                current_load = current_load + current_on - current_off
 
                 # Save max load if is the current max
                 if current_load > max_load:
@@ -377,7 +394,6 @@ class Route:
         return current_row
 
     def buildRouteTotalsByStop(self, worksheet, current_row):
-        self.times.sort()
         for stop_no in self.stops:
             current_row = self.stops[stop_no].buildRouteTotalsByStop( \
                 worksheet, current_row)
@@ -402,15 +418,24 @@ class Stop:
         self.stop_no = stop_no
         self.street = street
         self.cross_street = cross_street
-        self.data = {}
         self.descriptor = "Descriptor Unset"
         self.direction = Direction.UN
+
+        # Data is of the following format:
+        # [
+        #   arrival_time,
+        #   schedule_time,
+        #   offs,
+        #   ons,
+        #   load
+        # ]
+        self.data = {}
 
     def __str__(self) -> str:
         output = str(self.route) + ": " + str(self.stop_no) + " [" + \
             str(self.street) + "/" + str(self.cross_street) + "]\n"
         for datetime in sorted(self.data.keys()):
-            output += str(datetime) + " " + str(self.data[datetime][0]) + " " + str(self.data[datetime][1]) + " " + str(self.data[datetime][2]) + " " + str(self.data[datetime][3]) + "\n"
+            output += str(datetime) + " " + str(self.data[datetime][0]) + " " + str(self.data[datetime][1]) + " " + str(self.data[datetime][2]) + " " + str(self.data[datetime][3]) + " " + str(self.data[datetime][4]) + "\n"
         output += "\n"
         return output
 
@@ -433,7 +458,23 @@ class Stop:
         if not (isinstance(ons, int) and ons >= 0):
             ons = 0
 
-        self.data[datetime] = [arrival_time, schedule_time, offs, ons]
+        self.data[datetime] = [arrival_time, schedule_time, offs, ons, 0]
+
+    def setLoad(self, datetime, load):
+        """
+        Sets the load for a given datetime.
+
+        @param datetime The datetime when this route began
+        @param load The passenger load
+        """
+        # Clean input data
+        if not (isinstance(load, int) and load >= 0):
+            load = 0
+        # Add data if doesn't exist
+        if datetime not in self.data:
+            self.data[datetime] = [None, None, 0, 0, load]
+        else:
+            self.data[datetime][4] = load
 
     def setRouteData(self, description, direction: Direction):
         """
@@ -461,6 +502,17 @@ class Stop:
 
         return self.data[datetime][2], self.data[datetime][3]
 
+    def getOffsOnsAndLoad(self, datetime):
+        """
+        @returns the offs and ons for a specific datetime
+        """
+        # If datetime does not exist, return zeros
+        if datetime not in self.data:
+            return 0, 0, 0
+
+        return self.data[datetime][2], self.data[datetime][3],\
+            self.data[datetime][3]
+
     def getTotalOffsAndOns(self):
         """
         @returns the total offs and ons for all datetimes at this stop
@@ -480,7 +532,7 @@ class Stop:
         for key in self.data:
             offs += self.data[key][2]
             ons += self.data[key][3]
-            # TODO figure out load
+            load += self.data[key][4]
             
         total = ons + offs
 
@@ -681,8 +733,12 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         # increment current row
         current_row += 1
 
+    # Generate load data
+    log.logMessage("Generating load data")
+    route_manager.buildLoad()
+
     # DEBUG - Print all routes & stops & data
-    # print(str(route_manager))
+    print(str(route_manager))
 
     # Generate route totals sheet
     log.logMessage("Generating route totals")
