@@ -219,6 +219,23 @@ class RouteManager:
             current_row = self.routes[route].buildTotalsByTime(worksheet,\
             current_row)
 
+    def buildRouteTotalsByStop(self, worksheet) -> None:
+        worksheet["A1"] = "Route"
+        worksheet["B1"] = "Route Name"
+        worksheet["C1"] = "Stop"
+        worksheet["D1"] = "Street"
+        worksheet["E1"] = "Cross Street"
+        worksheet["F1"] = "Ons"
+        worksheet["G1"] = "Offs"
+        worksheet["H1"] = "Total"
+        worksheet["I1"] = "Load"
+
+        # Display values
+        current_row = 2
+        for route in sorted(self.routes.keys()):
+            current_row = self.routes[route].buildRouteTotalsByStop(worksheet, \
+                current_row)
+
 
 class Route:
     """
@@ -296,6 +313,10 @@ class Route:
         self.descriptor = description
         self.direction = direction
 
+        # Set for all child stops
+        for stop_no in self.stops:
+            self.stops[stop_no].setRouteData(description, direction)
+
     def getDescriptorAndDirection(self) -> str:
         """
         @returns A string representation of this routes descriptor and direction
@@ -355,6 +376,14 @@ class Route:
             current_row += 1
         return current_row
 
+    def buildRouteTotalsByStop(self, worksheet, current_row):
+        self.times.sort()
+        for stop_no in self.stops:
+            current_row = self.stops[stop_no].buildRouteTotalsByStop( \
+                worksheet, current_row)
+        return current_row
+
+
 
 class Stop:
     """
@@ -374,6 +403,8 @@ class Stop:
         self.street = street
         self.cross_street = cross_street
         self.data = {}
+        self.descriptor = "Descriptor Unset"
+        self.direction = Direction.UN
 
     def __str__(self) -> str:
         output = str(self.route) + ": " + str(self.stop_no) + " [" + \
@@ -404,6 +435,22 @@ class Stop:
 
         self.data[datetime] = [arrival_time, schedule_time, offs, ons]
 
+    def setRouteData(self, description, direction: Direction):
+        """
+        Sets the metadata for this route
+        
+        @param description A text description of the route (University, Uptown)
+        @param direction The direction of the route as a Direction object
+        """
+        self.descriptor = description
+        self.direction = direction
+
+    def getDescriptorAndDirection(self) -> str:
+        """
+        @returns A string representation of this routes descriptor and direction
+        """
+        return self.descriptor + " " + str(self.direction.value)
+
     def getOffsAndOns(self, datetime):
         """
         @returns the offs and ons for a specific datetime
@@ -424,6 +471,32 @@ class Stop:
             total_offs += self.data[datetime][2]
             total_ons += self.data[datetime][3]
         return total_offs, total_ons
+
+    def buildRouteTotalsByStop(self, worksheet, current_row):
+        ons = 0
+        offs = 0
+        load = 0
+        
+        for key in self.data:
+            offs += self.data[key][2]
+            ons += self.data[key][3]
+            # TODO figure out load
+            
+        total = ons + offs
+
+        # Write data to sheet
+        worksheet.cell(row=current_row, column=1).value = self.route
+        worksheet.cell(row=current_row, column=2).value = \
+            self.getDescriptorAndDirection()
+        worksheet.cell(row=current_row, column=3).value = self.stop_no
+        worksheet.cell(row=current_row, column=4).value = self.street
+        worksheet.cell(row=current_row, column=5).value = self.cross_street
+        worksheet.cell(row=current_row, column=6).value = ons
+        worksheet.cell(row=current_row, column=7).value = offs
+        worksheet.cell(row=current_row, column=8).value = total
+        worksheet.cell(row=current_row, column=9).value = load
+
+        return current_row + 1
         
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
@@ -620,6 +693,11 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     log.logMessage("Generating max load sheet")
     maxLoadSheet = wb.create_sheet("Max Load")
     route_manager.buildMaxLoads(maxLoadSheet)
+
+    # Generate totals by stop sheet
+    log.logMessage("Generating route totals per stop")
+    maxLoadSheet = wb.create_sheet("Ons Offs Tot & Ld")
+    route_manager.buildRouteTotalsByStop(maxLoadSheet)
 
     log.logMessage("Generation complete")
 
