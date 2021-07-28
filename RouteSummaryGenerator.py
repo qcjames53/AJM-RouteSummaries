@@ -243,6 +243,19 @@ class RouteManager:
             current_row = self.routes[route].buildRouteTotalsByStop(worksheet, \
                 current_row)
 
+    def buildOnTimeDetail(self, worksheet) -> None:
+        worksheet["A1"] = "Route"
+        worksheet["B1"] = "Route Name"
+        worksheet["C1"] = "Date"
+        worksheet["D1"] = "Time"
+        worksheet["E1"] = "Run"
+
+        # Display values
+        current_row = 2
+        for route in sorted(self.routes.keys()):
+            current_row = self.routes[route].buildOnTimeDetail(worksheet, \
+                current_row)
+
 
 class Route:
     """
@@ -261,6 +274,7 @@ class Route:
         self.descriptor = "Descriptor Unset"
         self.direction = Direction.UN
         self.log = log
+        self.timed_stops = []
 
     def __str__(self) -> str:
         output = ""
@@ -306,7 +320,14 @@ class Route:
         # If datetime does not exist, add it to datetimes and sort
         if datetime not in self.times:
             self.times.append(datetime)
-            self.times.sort()
+
+            # Sort by time, date instead of date, time
+            self.times.sort(key=lambda x: (x.time(), x.date()))
+
+        # If has time data, add to timed stops where neccesary
+        if (arrival_time is not None) and (stop_no not in self.timed_stops):
+            self.timed_stops.append(stop_no)
+            self.timed_stops.sort()
 
         self.stops[stop_no].addData(datetime, arrival_time, schedule_time, offs, ons)
 
@@ -399,7 +420,48 @@ class Route:
                 worksheet, current_row)
         return current_row
 
+    def buildOnTimeDetail(self, worksheet, current_row):
+        # If there are no timed stops, skip this stop
+        if len(self.timed_stops) == 0:
+            return current_row
 
+        # Build header
+        col = 6
+        for stop in self.timed_stops:
+            worksheet.cell(row=current_row, column=col).value = \
+                self.stops[stop].street
+            worksheet.cell(row=current_row + 1, column=col).value = \
+                self.stops[stop].cross_street
+            col += 1
+        current_row += 2
+
+        # Generate one row per time
+        for datetime in self.times:
+            # Write route data to row
+            worksheet.cell(row=current_row, column=1).value = self.route
+            worksheet.cell(row=current_row, column=2).value = self.descriptor
+            worksheet.cell(row=current_row, column=3).value = datetime.date()
+            worksheet.cell(row=current_row, column=4).value = datetime.time()
+            
+            # Write run number to row
+            worksheet.cell(row=current_row, column=5).value = \
+                self.stops[self.timed_stops[0]].run
+
+            # Write stop data to row
+            col = 6
+            for stop in self.timed_stops:
+                minutes_late = self.stops[stop].getMinutesLate(datetime)
+                # Handle error cases
+                if minutes_late is None:
+                    worksheet.cell(row=current_row, column=col).value = "NA"
+                else:
+                    worksheet.cell(row=current_row, column=col).value = \
+                        minutes_late
+                col += 1
+
+            current_row += 1
+        return current_row + 1
+            
 
 class Stop:
     """
@@ -420,6 +482,7 @@ class Stop:
         self.cross_street = cross_street
         self.descriptor = "Descriptor Unset"
         self.direction = Direction.UN
+        self.run = 0
 
         # Data is of the following format:
         # [
@@ -549,6 +612,20 @@ class Stop:
         worksheet.cell(row=current_row, column=9).value = load
 
         return current_row + 1
+
+    def getMinutesLate(self, datetime):
+        # If datetime doesn't exist, return None
+        if datetime not in self.data:
+            return None
+        
+        # If datetime does not have an arrival time or schedule time, ret None
+        data = self.data[datetime]
+        if data[0] is None or data[1] is None:
+            return None
+
+        # Data presumed good, return difference in minutes      
+        delta = data[0] - data[1]
+        return round(delta.total_seconds() / 60)
         
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
@@ -726,9 +803,18 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
 
         # add data to the route manager object
         # order of placement is route string -> date and time -> stop_number
-        date_and_time = datetime.datetime.combine(date, start_time)
-        route_manager.addData(route, stop_number, start_time, \
-            arrival_time, schedule_time, offs, ons)
+        start_datetime = datetime.datetime.combine(date, start_time)
+
+        arrival_datetime = None
+        if arrival_time is not None:
+            arrival_datetime = datetime.datetime.combine(date, arrival_time)
+
+        schedule_datetime = None
+        if schedule_time is not None:
+            schedule_datetime = datetime.datetime.combine(date, schedule_time)
+
+        route_manager.addData(route, stop_number, start_datetime, \
+            arrival_datetime, schedule_datetime, offs, ons)
 
         # increment current row
         current_row += 1
@@ -754,6 +840,11 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     log.logMessage("Generating route totals per stop")
     maxLoadSheet = wb.create_sheet("Ons Offs Tot & Ld")
     route_manager.buildRouteTotalsByStop(maxLoadSheet)
+
+    # Generate the on-time detail
+    log.logMessage("Generating on-time detail")
+    onTimeSheet = wb.create_sheet("On Time Detail")
+    route_manager.buildOnTimeDetail(onTimeSheet)
 
     log.logMessage("Generation complete")
 
