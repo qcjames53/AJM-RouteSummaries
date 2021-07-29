@@ -258,6 +258,12 @@ class RouteManager:
             current_row = self.routes[route].buildOnTimeDetail(worksheet, \
                 current_row)
 
+    def buildDetailReport(self, worksheet) -> None:
+        current_row = 1
+        for route in sorted(self.routes.keys()):
+            current_row = self.routes[route].buildDetailReport(worksheet, \
+                current_row)
+
 
 class Route:
     """
@@ -351,9 +357,10 @@ class Route:
         """
         Builds and saves the loads for all data points within this route
         """
-        for datetime in self.times:
+        times_by_datetime = sorted(self.times)
+        for datetime in times_by_datetime:
             current_load = 0
-            for stop_no in self.stops:
+            for stop_no in sorted(self.stops.keys()):
                 current_off, current_on = \
                     self.stops[stop_no].getOffsAndOns(datetime)
                 current_load = current_load + current_on - current_off
@@ -464,6 +471,33 @@ class Route:
 
             current_row += 1
         return current_row + 1
+
+    def buildDetailReport(self, worksheet, current_row):
+        # Display the header
+        worksheet.cell(row=current_row, column=3).value = "Route #"
+        worksheet.cell(row=current_row, column=4).value = self.route
+        worksheet.cell(row=current_row, column=5).value = \
+            self.getDescriptorAndDirection()
+        worksheet.cell(row=current_row + 2, column=3).value = "Stop Location"
+        worksheet.cell(row=current_row + 3, column=3).value = "Onboard"
+
+        # Display the time headers
+        col = 5
+        for datetime in self.times:
+            worksheet.cell(row=current_row+1, column=col+1).value = \
+                datetime.time()
+            worksheet.cell(row=current_row+2, column=col).value = "On"
+            worksheet.cell(row=current_row+2, column=col+1).value = "Off"
+            worksheet.cell(row=current_row+2, column=col+2).value = "OB"
+            col += 3
+
+        # Display the stops with info
+        current_row += 4
+        for stop_no in self.stops:
+            self.stops[stop_no].buildDetailReport(worksheet, current_row)
+            current_row += 1
+
+        return current_row + 3
             
 
 class Stop:
@@ -635,6 +669,23 @@ class Stop:
         # Data presumed good, return difference in minutes      
         delta = data[1] - data[2]
         return round(delta.total_seconds() / 60)
+
+    def buildDetailReport(self, worksheet, current_row):
+        # Display header
+        worksheet.cell(row=current_row, column=2).value = self.stop_no
+        worksheet.cell(row=current_row, column=3).value = self.street
+        worksheet.cell(row=current_row, column=4).value = self.cross_street
+
+        # Display data for each datetime
+        col = 5
+        for datetime in self.data:
+            worksheet.cell(row=current_row, column=col).value = \
+                self.data[datetime][4]
+            worksheet.cell(row=current_row, column=col + 1).value = \
+                self.data[datetime][3]
+            worksheet.cell(row=current_row, column=col + 2).value = \
+                self.data[datetime][5]
+            col += 3
         
 
 def generateSummary(ride_checks_filepath, route_info_filepath, 
@@ -854,6 +905,11 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     log.logMessage("Generating on-time detail")
     onTimeSheet = wb.create_sheet("On Time Detail")
     route_manager.buildOnTimeDetail(onTimeSheet)
+
+    # Generate the detail report
+    log.logMessage("Generating detail report")
+    detailReportSheet = wb.create_sheet("Detail Report")
+    route_manager.buildDetailReport(detailReportSheet)
 
     log.logMessage("Generation complete")
 
