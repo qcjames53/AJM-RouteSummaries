@@ -135,7 +135,7 @@ class RouteManager:
         # Add the stop to the appropriate route
         self.routes[route].addStop(stop_no, street, cross_street)
 
-    def addData(self, route, stop_no, datetime, arrival_time, \
+    def addData(self, route, stop_no, datetime, run, arrival_time, \
         schedule_time, offs, ons) -> None:
         """
         Adds data about a stop to the specified route object
@@ -154,7 +154,7 @@ class RouteManager:
             return
 
         # Add the data to the appropriate route
-        self.routes[route].addData(stop_no, datetime, arrival_time,\
+        self.routes[route].addData(stop_no, datetime, run, arrival_time,\
             schedule_time, offs, ons)
 
     def setRouteData(self, route, description, direction: Direction):
@@ -250,6 +250,8 @@ class RouteManager:
         worksheet["D1"] = "Time"
         worksheet["E1"] = "Run"
 
+        worksheet.column_dimensions["C"].width = 11
+
         # Display values
         current_row = 2
         for route in sorted(self.routes.keys()):
@@ -300,8 +302,8 @@ class Route:
 
         self.stops[stop_no] = Stop(self.route, stop_no, street, cross_street)
 
-    def addData(self, stop_no, datetime, arrival_time, schedule_time, offs, \
-        ons):
+    def addData(self, stop_no, datetime, run, arrival_time, schedule_time, \
+        offs, ons):
         """
         Adds data about a stop to a specific stop object
         
@@ -329,7 +331,7 @@ class Route:
             self.timed_stops.append(stop_no)
             self.timed_stops.sort()
 
-        self.stops[stop_no].addData(datetime, arrival_time, schedule_time, offs, ons)
+        self.stops[stop_no].addData(datetime, run, arrival_time, schedule_time, offs, ons)
 
     def setRouteData(self, description, direction: Direction):
         """
@@ -439,13 +441,14 @@ class Route:
         for datetime in self.times:
             # Write route data to row
             worksheet.cell(row=current_row, column=1).value = self.route
-            worksheet.cell(row=current_row, column=2).value = self.descriptor
+            worksheet.cell(row=current_row, column=2).value = \
+                self.getDescriptorAndDirection()
             worksheet.cell(row=current_row, column=3).value = datetime.date()
             worksheet.cell(row=current_row, column=4).value = datetime.time()
             
             # Write run number to row
             worksheet.cell(row=current_row, column=5).value = \
-                self.stops[self.timed_stops[0]].run
+                self.stops[self.timed_stops[0]].getRun(datetime)
 
             # Write stop data to row
             col = 6
@@ -482,7 +485,6 @@ class Stop:
         self.cross_street = cross_street
         self.descriptor = "Descriptor Unset"
         self.direction = Direction.UN
-        self.run = 0
 
         # Data is of the following format:
         # [
@@ -505,7 +507,7 @@ class Stop:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addData(self, datetime, arrival_time, schedule_time, offs, ons):
+    def addData(self, datetime, run, arrival_time, schedule_time, offs, ons):
         """
         Add data from a certain run to this stop
         
@@ -521,7 +523,7 @@ class Stop:
         if not (isinstance(ons, int) and ons >= 0):
             ons = 0
 
-        self.data[datetime] = [arrival_time, schedule_time, offs, ons, 0]
+        self.data[datetime] = [run, arrival_time, schedule_time, offs, ons, 0]
 
     def setLoad(self, datetime, load):
         """
@@ -535,9 +537,9 @@ class Stop:
             load = 0
         # Add data if doesn't exist
         if datetime not in self.data:
-            self.data[datetime] = [None, None, 0, 0, load]
+            self.data[datetime] = [None, None, None, 0, 0, load]
         else:
-            self.data[datetime][4] = load
+            self.data[datetime][5] = load
 
     def setRouteData(self, description, direction: Direction):
         """
@@ -555,6 +557,13 @@ class Stop:
         """
         return self.descriptor + " " + str(self.direction.value)
 
+    def getRun(self, datetime) -> str:
+        # If datetime does not exist, return None
+        if datetime not in self.data:
+            return None
+
+        return str(self.data[datetime][0])
+
     def getOffsAndOns(self, datetime):
         """
         @returns the offs and ons for a specific datetime
@@ -563,7 +572,7 @@ class Stop:
         if datetime not in self.data:
             return 0, 0
 
-        return self.data[datetime][2], self.data[datetime][3]
+        return self.data[datetime][3], self.data[datetime][4]
 
     def getOffsOnsAndLoad(self, datetime):
         """
@@ -573,8 +582,8 @@ class Stop:
         if datetime not in self.data:
             return 0, 0, 0
 
-        return self.data[datetime][2], self.data[datetime][3],\
-            self.data[datetime][3]
+        return self.data[datetime][3], self.data[datetime][4],\
+            self.data[datetime][5]
 
     def getTotalOffsAndOns(self):
         """
@@ -583,8 +592,8 @@ class Stop:
         total_offs = 0
         total_ons = 0
         for datetime in self.data:
-            total_offs += self.data[datetime][2]
-            total_ons += self.data[datetime][3]
+            total_offs += self.data[datetime][3]
+            total_ons += self.data[datetime][4]
         return total_offs, total_ons
 
     def buildRouteTotalsByStop(self, worksheet, current_row):
@@ -593,9 +602,9 @@ class Stop:
         load = 0
         
         for key in self.data:
-            offs += self.data[key][2]
-            ons += self.data[key][3]
-            load += self.data[key][4]
+            offs += self.data[key][3]
+            ons += self.data[key][4]
+            load += self.data[key][5]
             
         total = ons + offs
 
@@ -620,11 +629,11 @@ class Stop:
         
         # If datetime does not have an arrival time or schedule time, ret None
         data = self.data[datetime]
-        if data[0] is None or data[1] is None:
+        if data[1] is None or data[2] is None:
             return None
 
         # Data presumed good, return difference in minutes      
-        delta = data[0] - data[1]
+        delta = data[1] - data[2]
         return round(delta.total_seconds() / 60)
         
 
@@ -814,7 +823,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
             schedule_datetime = datetime.datetime.combine(date, schedule_time)
 
         route_manager.addData(route, stop_number, start_datetime, \
-            arrival_datetime, schedule_datetime, offs, ons)
+            run, arrival_datetime, schedule_datetime, offs, ons)
 
         # increment current row
         current_row += 1
@@ -824,7 +833,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     route_manager.buildLoad()
 
     # DEBUG - Print all routes & stops & data
-    print(str(route_manager))
+    # print(str(route_manager))
 
     # Generate route totals sheet
     log.logMessage("Generating route totals")
