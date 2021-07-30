@@ -136,7 +136,7 @@ class RouteManager:
         self.routes[route].addStop(stop_no, street, cross_street)
 
     def addData(self, route, stop_no, datetime, run, arrival_time, \
-        schedule_time, offs, ons) -> None:
+        schedule_time, offs, ons):
         """
         Adds data about a stop to the specified route object
 
@@ -151,10 +151,10 @@ class RouteManager:
         # If the route does not exist, log an error and return
         if route not in self.routes:
             self.log.logError("Tried to add data to nonexistent route: " + str(route))
-            return
+            return False
 
         # Add the data to the appropriate route
-        self.routes[route].addData(stop_no, datetime, run, arrival_time,\
+        return self.routes[route].addData(stop_no, datetime, run, arrival_time,\
             schedule_time, offs, ons)
 
     def setRouteData(self, route, description, direction: Direction):
@@ -323,7 +323,7 @@ class Route:
         # If stop_no does not exist, throw error and return
         if stop_no not in self.stops:
             self.log.logError("Tried to add data to stop " + str(stop_no) + " in route " + str(self.route) + " when stop does not exist.")
-            return
+            return False
 
         # If datetime does not exist, add it to datetimes and sort
         if datetime not in self.times:
@@ -337,7 +337,8 @@ class Route:
             self.timed_stops.append(stop_no)
             self.timed_stops.sort()
 
-        self.stops[stop_no].addData(datetime, run, arrival_time, schedule_time, offs, ons)
+        return self.stops[stop_no].addData(datetime, run, arrival_time, \
+            schedule_time, offs, ons)
 
     def setRouteData(self, description, direction: Direction):
         """
@@ -558,6 +559,7 @@ class Stop:
             ons = 0
 
         self.data[datetime] = [run, arrival_time, schedule_time, offs, ons, 0]
+        return True
 
     def setLoad(self, datetime, load):
         """
@@ -784,7 +786,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         date = ride_checks.cell(row=current_row, column=2).value
         route = ride_checks.cell(row=current_row, column=3).value
         direction = ride_checks.cell(row=current_row, column=4).value
-        run = ride_checks.cell(row=current_row, column=5).value
+        run = str(ride_checks.cell(row=current_row, column=5).value)
         start_time = ride_checks.cell(row=current_row, column=6).value
         #onboard = ride_checks.cell(row=current_row, column=7).value
         stop_number = ride_checks.cell(row=current_row, column=8).value
@@ -823,17 +825,22 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
                 str(direction) + "' is not a valid input. Skipping row.")
             current_row += 1
             continue
-        if (not isinstance(run, int)):
-            log.logError("Row " + str(current_row) + ": Run '" + \
-                str(run) + "' is not an integer. Skipping row.")
-            current_row += 1
-            continue
         if (not isinstance(start_time, datetime.time)):
             log.logError("Row " + str(current_row) + ": Start time '" + \
                 str(start_time) + "' is not an excel-formatted time. " + \
                 "Skipping row.")
             current_row += 1
             continue
+
+        # correct blank strings in optional data
+        if arrival_time == "":
+            arrival_time = None
+        if schedule_time == "":
+            schedule_time = None
+        if ons == "":
+            ons = None
+        if offs == "":
+            offs = None
 
         # check that all optional data is the correct format if filled in
         if (arrival_time is not None) and (not isinstance(arrival_time, \
@@ -873,8 +880,11 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         if schedule_time is not None:
             schedule_datetime = datetime.datetime.combine(date, schedule_time)
 
-        route_manager.addData(route, stop_number, start_datetime, \
-            run, arrival_datetime, schedule_datetime, offs, ons)
+        add_data_result = route_manager.addData(route, stop_number, \
+            start_datetime, run, arrival_datetime, schedule_datetime, offs, ons)
+
+        if not add_data_result:
+            log.logError("Row " + str(current_row) + ": Add data failure.")
 
         # increment current row
         current_row += 1
