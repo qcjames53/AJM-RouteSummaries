@@ -3,9 +3,7 @@
 A Python software solution for summarizing ridership statistics from bus routes. The program uses two Microsoft Excel workbooks as input and ouputs five summaries to an Excel workbook, each summary focusing on various statistics. This is a proprietary project, written for AJM & Associates LLC.
 
 ## Using The Program
-This section of documentation is incomplete and will be updated as the program is developed.
-
-Currently, the program is launched by running the python script 'MainUI.py'.
+Launch the application by running the python script 'MainUI.py'.
 
 Note that this program has the following dependencies:
 * [Python 3.9.5](https://www.python.org/downloads/release/python-395/)
@@ -14,7 +12,7 @@ Note that this program has the following dependencies:
 ---
 
 ## Program Inputs
-Route Summaries requires two Microsoft Excel workbook files as input to properly produce summaries: A ride checks data file and a route information file. Template files can be created through the program menu (future feature, not yet implemented).
+Route Summaries requires two Microsoft Excel workbook files as input to properly produce summaries: A ride checks data file and a route information file. Template files can be created through the program menu.
 
 #### Ride Checks Data File
 An MS-Excel workbook containing any number of rows with row 0 reserved for fixed headers. Each row contains the following columns of data, representing one ride check data entry:
@@ -31,7 +29,7 @@ An MS-Excel workbook containing any number of rows with row 0 reserved for fixed
 * START TIME
     * An MS-Excel formatted time representing the start time of the current route. This time should be consistent for all entries in a  given date, route, direction, run combination.
 * ONBOARD
-    * The number of passengers carried over from a previous route on a given run if the number of passengers on board is above 0. Used as a human check in the input spreadsheet. 
+    * The number of passengers carried over from a previous route on a given run if the number of passengers on board is above 0. Should be the same for all stops on one route with the same start date & time.
 * STOP NUMBER
     * The bus stop number of this stop. Stops where no passengers depart or board may be ommited.
 * ARRIVAL TIME
@@ -42,23 +40,21 @@ An MS-Excel workbook containing any number of rows with row 0 reserved for fixed
     * The number of passengers departing the bus at this stop.
 * ONS
     * The number of passengers boarding the bus at this stop.
-* LOADS
-    * The number of passengers on the bus after this stop.
-* TIME CHECK
-    * The difference between the ARRIVAL TIME and the SCHEDULE TIME for this stop. May be left blank if SCHEDULE TIME is also left blank.
+* LOADS (Optional)
+    * The number of passengers on the bus after this stop. This row is not used for program data but may be filled in for manual reference.
+* TIME CHECK (Optional)
+    * The difference between the ARRIVAL TIME and the SCHEDULE TIME for this stop. This row is not used for program data but may be filled in for manual reference.
 
 #### Route Information File
-An MS-Excel workbook containing any number of sheets, each of which represents a ROUTE-DIRECTION combination of the form 'Rte #D' where # is the ROUTE and D is the DIRECTION as defined above in the [Ride Checks Data File section](https://github.com/qcjames53/AJM-RouteSummaries#ride-checks-data-file).
+An MS-Excel workbook containing one sheet which represents a ROUTE-DIRECTION combination of the form 'Rte #D' where # is the ROUTE and D is the DIRECTION as defined above in the [Ride Checks Data File section](https://github.com/qcjames53/AJM-RouteSummaries#ride-checks-data-file).
 
-A template file can be created using the program menu. Each sheet may contain an unlimited number of column-aligned tables on arbitrary rows. The following information is required for each table header:
+The sheet may contain an unlimited number of column-aligned tables on arbitrary rows. The following information is required for each table header:
 
 * ROUTE
     * The route number of this table
 
 * DIRECTION
     * The direction of the route. Valid inputs are **[IB, OB, NB, EB, SB, WB]**, representing the inbound busses, outbound busses, and the four cardial directions. 
-* START TIME
-    * An MS-Excel formatted time representing the start time of the current route.
 
 Additionally, each row of the table represents a stop on this route. Each row must be populated with the following columns:
 
@@ -68,6 +64,8 @@ Additionally, each row of the table represents a stop on this route. Each row mu
     * The name of the cross street of this stop. This name is flexible depending on the naming convention of the bus route.
 * NO
     * The stop number for this route. Columns must be in numberical order from top to bottom.
+
+All other data may be left blank.
 
 ---
 
@@ -132,7 +130,7 @@ A sheet which displays totals for each stop on each route. Data is output in row
 * Load
     * The total number of passengers onboard the bus after this stop.
 
-Each route is prefaced by a row titled 'ONBOARD'. This row represents the total passengers being carried over from a previous route. Additionally, each route is appended by a row titled 'TOTAL'. This row represents the total of all four data columns for all stops on this route.
+Each route is prefaced by a row titled 'ONBOARD'. This row represents the total passengers being carried over from a previous route.
 
 #### Notes
 An additional sheet used to detail operational details which may affect the collected data. This data is manually added after workbook generation.

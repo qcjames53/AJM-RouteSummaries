@@ -68,7 +68,7 @@ class Log:
         self.log_sheet["A1"] = "Elapsed time"
         self.log_sheet["B1"] = "Message"
 
-    def logMessage(self, message):
+    def logMessage(self, message) -> None:
         """
         Logs a message to the log sheet.
 
@@ -79,7 +79,7 @@ class Log:
         self.log_sheet["B" + str(self.log_row)] = message
         self.log_row += 1
 
-    def logWarning(self, message):
+    def logWarning(self, message) -> None:
         """
         Logs a warning to the log sheet.
 
@@ -87,7 +87,7 @@ class Log:
         """
         self.logMessage("[WARNING] " + message)
 
-    def logError(self, message):
+    def logError(self, message) -> None:
         """
         Logs an error to the log sheet.
 
@@ -119,7 +119,7 @@ class RouteManager:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addStop(self, route, stop_no, street, cross_street):
+    def addStop(self, route, stop_no, street, cross_street) -> None:
         """
         Adds a stop to the specified route object.
         
@@ -143,10 +143,12 @@ class RouteManager:
         @param route The route with which to add the stop
         @param stop_no The stop number
         @param datetime The datetime the route began
+        @param run The run value of this stop
         @param arrival_time The arrival time of the stop
         @param schedule_time The scheduled arrival time of the stop
         @param offs The number of passengers departing the bus
         @param ons The number of passengers boarding the bus
+        @param onboard The number of passengers carrying over from a prev route
         """
         # If the route does not exist, log an error and return
         if route not in self.routes:
@@ -157,7 +159,7 @@ class RouteManager:
         return self.routes[route].addData(stop_no, datetime, run, arrival_time,\
             schedule_time, offs, ons, onboard)
 
-    def setRouteData(self, route, description, direction: Direction):
+    def setRouteData(self, route, description, direction: Direction) -> None:
         """
         Sets the metadata of a particular route.
         
@@ -227,6 +229,12 @@ class RouteManager:
             current_row)
 
     def buildRouteTotalsByStop(self, worksheet) -> None:
+        """
+        Builds a worksheet of route totals for each stop. See the README file
+        for further description regarding this functionality.
+
+        @param worksheet The excel worksheet to operate on
+        """
         worksheet["A1"] = "Route"
         worksheet["B1"] = "Route Name"
         worksheet["C1"] = "Stop"
@@ -244,6 +252,12 @@ class RouteManager:
                 current_row)
 
     def buildOnTimeDetail(self, worksheet) -> None:
+        """
+        Builds a worksheet of whether busses were on time or not. See the README
+        file for further description regarding this functionality.
+
+        @param worksheet The excel worksheet to operate on
+        """
         worksheet["A1"] = "Route"
         worksheet["B1"] = "Route Name"
         worksheet["C1"] = "Date"
@@ -259,6 +273,12 @@ class RouteManager:
                 current_row)
 
     def buildDetailReport(self, worksheet) -> None:
+        """
+        Builds a detailed report of all data collected. See the README file for 
+        further details regarding this functionality.
+
+        @param worksheet The excel worksheet to operate on
+        """
         current_row = 1
         for route in sorted(self.routes.keys()):
             current_row = self.routes[route].buildDetailReport(worksheet, \
@@ -294,7 +314,7 @@ class Route:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addStop(self, stop_no, street, cross_street):
+    def addStop(self, stop_no, street, cross_street) -> None:
         """
         Adds a stop of stop_no to this route
         
@@ -317,10 +337,12 @@ class Route:
         
         @param stop_no The stop number where we're adding this data
         @param datetime The datetime when the route began
+        @param run The run value for this stop
         @param arrival_time Optional: The arrival time for this stop
         @param schedule_time Optional: The scheduled arrival time for this stop
         @param offs Optional: The number of passengers departing the bus
         @param ons Optional: The number of passengers boarding the bus
+        @param onboard The number of passengers carrying over from a prev route
         """
         # If stop_no does not exist, throw error and return
         if stop_no not in self.stops:
@@ -353,7 +375,7 @@ class Route:
         return self.stops[stop_no].addData(datetime, run, arrival_time, \
             schedule_time, offs, ons)
 
-    def setRouteData(self, description, direction: Direction):
+    def setRouteData(self, description, direction: Direction) -> None:
         """
         Sets the metadata for this route
         
@@ -467,12 +489,24 @@ class Route:
         return current_row
 
     def buildRouteTotalsByStop(self, worksheet, current_row):
+        """
+        Builds total values for the route for each stop.
+
+        @param worksheet The excel worksheet to operate on
+        @param current_row The row of the worksheet to start on
+        """
         for stop_no in self.stops:
             current_row = self.stops[stop_no].buildRouteTotalsByStop( \
                 worksheet, current_row)
         return current_row
 
     def buildOnTimeDetail(self, worksheet, current_row):
+        """
+        Builds table of stops that are on time or not.
+
+        @param worksheet The excel worksheet to operate on
+        @param current_row The row of the worksheet to start on
+        """
         # If there are no timed stops, skip this stop
         if len(self.timed_stops) == 0:
             return current_row
@@ -516,6 +550,12 @@ class Route:
         return current_row + 1
 
     def buildDetailReport(self, worksheet, current_row):
+        """
+        Builds a detailed report of all data collected.
+
+        @param worksheet The excel worksheet to operate on
+        @param current_row The worksheet row to start on
+        """
         # Display the header
         worksheet.cell(row=current_row, column=3).value = "Route #"
         worksheet.cell(row=current_row, column=4).value = self.route
@@ -601,6 +641,7 @@ class Stop:
         Add data from a certain run to this stop
         
         @param datetime The datetime when this route begain
+        @param run The run value of this stop
         @param arrival_time Optional: The arrival time for this stop
         @param schedule_time Optional: The scheduled arrival time for this stop
         @param offs Optional: The number of passengers departing the bus
@@ -666,7 +707,7 @@ class Stop:
 
     def getOffsOnsAndLoad(self, datetime):
         """
-        @returns the offs and ons for a specific datetime
+        @returns the offs ons and load for a specific datetime
         """
         # If datetime does not exist, return zeros
         if datetime not in self.data:
@@ -687,6 +728,12 @@ class Stop:
         return total_offs, total_ons
 
     def buildRouteTotalsByStop(self, worksheet, current_row):
+        """
+        Builds a route total for this stop for all datetimes
+
+        @param worksheet The worksheet to operate on
+        @param current_row The row to start on in the worksheet
+        """
         ons = 0
         offs = 0
         load = 0
@@ -982,6 +1029,10 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     detailReportSheet = wb.create_sheet("Detail Report")
     route_manager.buildDetailReport(detailReportSheet)
 
+    # Add notes sheet
+    wb.create_sheet("Notes")
+
+    # Generation complete
     log.logMessage("Generation complete")
 
     # Try to save the output file
