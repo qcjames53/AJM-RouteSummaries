@@ -372,6 +372,7 @@ class Route:
         Builds and saves the loads for all data points within this route
         """
         times_by_datetime = sorted(self.times)
+        current_load = 0
         for datetime in times_by_datetime:
             # Set the starting load to the onboard value (stored)
             current_load = 0
@@ -389,6 +390,10 @@ class Route:
                     self.log.logWarning("Route " + str(self.route) + " time " +\
                         str(datetime) + " stop " + str(stop_no) + \
                         ": The load has dropped below 0 (check for bad data)")
+
+        # Output a warning if the last load does not 0 out
+        if current_load != 0:
+            self.log.logWarning("Route " + str(self.route) + " Current load did not 0 out at the end of the last route. Counts may be incorrect.")
 
     def getDescriptorAndDirection(self) -> str:
         """
@@ -571,6 +576,7 @@ class Stop:
 
         # Data is of the following format:
         # [
+        #   run,
         #   arrival_time,
         #   schedule_time,
         #   offs,
@@ -826,6 +832,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
             route_manager.addStop(current_route, stop_no, street, cross_street)
 
     # start parsing the ride checks file
+    log.logMessage("Parsing ride checks file")
     current_row = 2
     prev_seq = 0
     while(ride_checks.cell(row=current_row, column=1).value is not None):
@@ -944,7 +951,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         current_row += 1
 
     # Generate load data
-    log.logMessage("Generating load data")
+    log.logMessage("Building load data")
     route_manager.buildLoad()
 
     # DEBUG - Print all routes & stops & data
