@@ -136,7 +136,7 @@ class RouteManager:
         self.routes[route].addStop(stop_no, street, cross_street)
 
     def addData(self, route, stop_no, datetime, run, arrival_time, \
-        schedule_time, offs, ons):
+        schedule_time, offs, ons, onboard):
         """
         Adds data about a stop to the specified route object
 
@@ -155,7 +155,7 @@ class RouteManager:
 
         # Add the data to the appropriate route
         return self.routes[route].addData(stop_no, datetime, run, arrival_time,\
-            schedule_time, offs, ons)
+            schedule_time, offs, ons, onboard)
 
     def setRouteData(self, route, description, direction: Direction):
         """
@@ -199,8 +199,8 @@ class RouteManager:
             worksheet.cell(row=current_row, column=1).value = route
             worksheet.cell(row=current_row, column=2).value = \
                 self.routes[route].getDescriptorAndDirection()
-            worksheet.cell(row=current_row, column=3).value = offs
-            worksheet.cell(row=current_row, column=4).value = ons
+            worksheet.cell(row=current_row, column=3).value = ons
+            worksheet.cell(row=current_row, column=4).value = offs
             worksheet.cell(row=current_row, column=5).value = total
 
             current_row += 1
@@ -283,6 +283,7 @@ class Route:
         self.direction = Direction.UN
         self.log = log
         self.timed_stops = []
+        self.onboard = 0
 
     def __str__(self) -> str:
         output = ""
@@ -309,7 +310,7 @@ class Route:
         self.stops[stop_no] = Stop(self.route, stop_no, street, cross_street)
 
     def addData(self, stop_no, datetime, run, arrival_time, schedule_time, \
-        offs, ons):
+        offs, ons, onboard):
         """
         Adds data about a stop to a specific stop object
         
@@ -337,6 +338,17 @@ class Route:
             self.timed_stops.append(stop_no)
             self.timed_stops.sort()
 
+        # Set the onboard value for this route if the value is provided
+        if onboard is not None:
+            # Log a warning if we're changing an already set onboard number
+            if self.onboard != 0 and self.onboard != onboard:
+                self.log.logWarning("Route " + str(self.route) + " time " + \
+                    str(datetime) + " stop " + str(stop_no) + \
+                    "Overriding onboard value " + str(self.onboard) + \
+                    " with new value " + str(onboard))
+            # Set the value regardless
+            self.onboard = onboard
+
         return self.stops[stop_no].addData(datetime, run, arrival_time, \
             schedule_time, offs, ons)
 
@@ -360,12 +372,18 @@ class Route:
         """
         times_by_datetime = sorted(self.times)
         for datetime in times_by_datetime:
-            current_load = 0
+            current_load = self.onboard
             for stop_no in sorted(self.stops.keys()):
                 current_off, current_on = \
                     self.stops[stop_no].getOffsAndOns(datetime)
                 current_load = current_load + current_on - current_off
                 self.stops[stop_no].setLoad(datetime, current_load)
+
+                # Display an error if current_load drops below 0
+                if current_load < 0:
+                    self.log.logWarning("Route " + str(self.route) + " time " +\
+                        str(datetime) + " stop " + str(stop_no) + \
+                        ": The load has dropped below 0 (check for bad data)")
 
     def getDescriptorAndDirection(self) -> str:
         """
@@ -484,12 +502,15 @@ class Route:
 
         # Display the time headers
         col = 5
-        for datetime in self.times:
+        for datetime in sorted(self.times):
+            worksheet.cell(row=current_row+1, column=col).value = \
+                datetime.date()
             worksheet.cell(row=current_row+1, column=col+1).value = \
                 datetime.time()
             worksheet.cell(row=current_row+2, column=col).value = "On"
             worksheet.cell(row=current_row+2, column=col+1).value = "Off"
             worksheet.cell(row=current_row+2, column=col+2).value = "OB"
+            worksheet.cell(row=current_row+3, column=col+2).value = self.onboard
             col += 3
 
         # Display the stops with info
@@ -680,7 +701,7 @@ class Stop:
 
         # Display data for each datetime
         col = 5
-        for datetime in self.data:
+        for datetime in sorted(self.data.keys()):
             worksheet.cell(row=current_row, column=col).value = \
                 self.data[datetime][4]
             worksheet.cell(row=current_row, column=col + 1).value = \
@@ -719,14 +740,14 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     # Try to open the ride checks file, if can't return major error
     try:
         ride_checks_wb = openpyxl.load_workbook(filename=ride_checks_filepath)
-    except Exception as e:
+    except Exception:
         log.logMessage("[ERROR] Could not open the ride checks workbook '" +\
             ride_checks_filepath + "'")
         
         # Try to save the output file
         try:
             wb.save(output_filepath)
-        except Exception as e:
+        except Exception:
             return 2
         return 1
     ride_checks = ride_checks_wb.active
@@ -734,7 +755,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     # Try to open the route info file, if can't return major error
     try:
         route_info_wb = openpyxl.load_workbook(filename=route_info_filepath)
-    except Exception as e:
+    except Exception:
         log.logMessage("[ERROR] Could not open the route info workbook '" +\
             route_info_filepath + "'")
         
@@ -788,7 +809,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         direction = ride_checks.cell(row=current_row, column=4).value
         run = str(ride_checks.cell(row=current_row, column=5).value)
         start_time = ride_checks.cell(row=current_row, column=6).value
-        #onboard = ride_checks.cell(row=current_row, column=7).value
+        onboard = ride_checks.cell(row=current_row, column=7).value
         stop_number = ride_checks.cell(row=current_row, column=8).value
         arrival_time = ride_checks.cell(row=current_row, column=9).value
         schedule_time = ride_checks.cell(row=current_row, column=10).value
@@ -843,6 +864,11 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
             offs = None
 
         # check that all optional data is the correct format if filled in
+        if (onboard is not None) and (not isinstance(onboard, int)):
+            log.logError("Row " + str(current_row) + ": Onboard '" + \
+                str(onboard) + "' is not an integer. Skipping row.")
+            current_row += 1
+            continue
         if (arrival_time is not None) and (not isinstance(arrival_time, \
             datetime.time)):
             log.logError("Row " + str(current_row) + ": Arrival time '" + \
@@ -881,7 +907,8 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
             schedule_datetime = datetime.datetime.combine(date, schedule_time)
 
         add_data_result = route_manager.addData(route, stop_number, \
-            start_datetime, run, arrival_datetime, schedule_datetime, offs, ons)
+            start_datetime, run, arrival_datetime, schedule_datetime, offs, \
+            ons, onboard)
 
         if not add_data_result:
             log.logError("Row " + str(current_row) + ": Add data failure.")

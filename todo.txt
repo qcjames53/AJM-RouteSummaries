@@ -1,0 +1,2 @@
+Combine identical times on different days into totals on Max Load
+Ons off Totl & Load Descriptors are incorrect
