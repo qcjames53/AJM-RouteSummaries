@@ -283,7 +283,7 @@ class Route:
         self.direction = Direction.UN
         self.log = log
         self.timed_stops = []
-        self.onboard = 0
+        self.onboard = {}
 
     def __str__(self) -> str:
         output = ""
@@ -308,6 +308,7 @@ class Route:
             return
 
         self.stops[stop_no] = Stop(self.route, stop_no, street, cross_street)
+        self.stops[stop_no].setRouteData(self.descriptor, self.direction)
 
     def addData(self, stop_no, datetime, run, arrival_time, schedule_time, \
         offs, ons, onboard):
@@ -341,13 +342,13 @@ class Route:
         # Set the onboard value for this route if the value is provided
         if onboard is not None:
             # Log a warning if we're changing an already set onboard number
-            if self.onboard != 0 and self.onboard != onboard:
+            if datetime in self.onboard and self.onboard[datetime] != onboard:
                 self.log.logWarning("Route " + str(self.route) + " time " + \
                     str(datetime) + " stop " + str(stop_no) + \
-                    "Overriding onboard value " + str(self.onboard) + \
+                    "Overriding onboard value " + str(self.onboard[datetime]) +\
                     " with new value " + str(onboard))
             # Set the value regardless
-            self.onboard = onboard
+            self.onboard[datetime] = onboard
 
         return self.stops[stop_no].addData(datetime, run, arrival_time, \
             schedule_time, offs, ons)
@@ -372,7 +373,11 @@ class Route:
         """
         times_by_datetime = sorted(self.times)
         for datetime in times_by_datetime:
-            current_load = self.onboard
+            # Set the starting load to the onboard value (stored)
+            current_load = 0
+            if datetime in self.onboard:
+                current_load = self.onboard[datetime]
+
             for stop_no in sorted(self.stops.keys()):
                 current_off, current_on = \
                     self.stops[stop_no].getOffsAndOns(datetime)
@@ -412,27 +417,41 @@ class Route:
         @param worksheet The workbook to output to
         @param current_row The row of the worksheet to start on
         """
-        for datetime in self.times:
-            # Generate the totals per datetime
+        # Loop over every datetime
+        dt_search_index = 0
+        while dt_search_index < len(self.times):
+            # Get a list of all datetimes with the same start time as the
+            # current index
+            search_datetimes = [self.times[dt_search_index]]
+            dt_search_index += 1
+            while dt_search_index < len(self.times) and \
+                search_datetimes[0].time() == \
+                self.times[dt_search_index].time():
+                search_datetimes.append(self.times[dt_search_index])
+                dt_search_index += 1
+
+            # Generate totals and max for all stops for all datetimes in list
             offs = 0
             ons = 0
             current_load = 0
             max_load = 0
-            for stop_no in self.stops:
-                current_off, current_on, current_load = \
-                    self.stops[stop_no].getOffsOnsAndLoad(datetime)
+            for datetime in search_datetimes:
+                for stop_no in self.stops:
+                    current_off, current_on, current_load = \
+                        self.stops[stop_no].getOffsOnsAndLoad(datetime)
 
-                # Add to tallies
-                offs += current_off
-                ons += current_on
+                    # Add to tallies
+                    offs += current_off
+                    ons += current_on
 
-                # Save max load if is the current max
-                if current_load > max_load:
-                    max_load = current_load
+                    # Save max load if is the current max
+                    if current_load > max_load:
+                        max_load = current_load
 
             # Write data to sheet
             worksheet.cell(row=current_row, column=1).value = self.route
-            worksheet.cell(row=current_row, column=2).value = self.descriptor
+            worksheet.cell(row=current_row, column=2).value = \
+                self.getDescriptorAndDirection()
             worksheet.cell(row=current_row, column=3).value = \
                 datetime.strftime("%H:%M")
             worksheet.cell(row=current_row, column=4).value = ons
@@ -510,7 +529,15 @@ class Route:
             worksheet.cell(row=current_row+2, column=col).value = "On"
             worksheet.cell(row=current_row+2, column=col+1).value = "Off"
             worksheet.cell(row=current_row+2, column=col+2).value = "OB"
-            worksheet.cell(row=current_row+3, column=col+2).value = self.onboard
+            worksheet.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 11
+
+            # Display onboard if it exists
+            if datetime in self.onboard:
+                worksheet.cell(row=current_row+3, column=col+2).value = \
+                self.onboard[datetime]
+            else:
+                worksheet.cell(row=current_row+3, column=col+2).value = 0
+
             col += 3
 
         # Display the stops with info

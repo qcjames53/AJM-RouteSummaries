@@ -293,6 +293,10 @@ class MainWindow(tkinter.Frame):
             self.applicationMessage("Summary generation failed.")
             print(traceback.format_exc())
 
+        # Reset the selected filepaths
+        self.route_info_filepath = None
+        self.ride_checks_filepath = None
+
 
 
 
