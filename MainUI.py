@@ -17,6 +17,7 @@ import traceback
 from TemplateGeneratorRideChecks import createTemplateRideChecks
 from TemplateGeneratorRouteInfo import createTemplateRouteSummary
 from RouteSummaryGenerator import generateSummary
+from WorkbookUpdateUtility import convertWorkbook
 
 # Constants
 DEFAULT_WINDOW_WIDTH = 800
@@ -89,7 +90,9 @@ class MainWindow(tkinter.Frame):
         generateMenu.add_command(label="Route Information",
             command=self.createRouteInfo)
         templateMenu.add_cascade(label="Generate Template", menu=generateMenu)
-        menu.add_cascade(label="Template", menu=templateMenu)
+        templateMenu.add_command(label="Old Format Comversion", 
+            command=self.convertOldFormat)
+        menu.add_cascade(label="Utility", menu=templateMenu)
 
         # Create Run Button
         menu.add_command(label="Run", command=self.runRouteSummary)
@@ -184,6 +187,54 @@ class MainWindow(tkinter.Frame):
         createTemplateRouteSummary(save_filepath)
         self.applicationMessage("Successfully created the route info template"\
             + " '" + save_filepath + "'")
+
+    
+    def convertOldFormat(self):
+        """
+        Asks the user to select a document to convert. Tries to update this
+        document to the new document format (.xls to .xlsx, replaces numberical
+        dates and times with Excel dates and times, etc.)
+        """
+        # Ask the user to select the old workbook
+        self.applicationMessage("Selecting old-format workbook file...")
+        filepath = askopenfilename(
+            title="Select Old-format Workbook", 
+            filetypes=[("Excel 1995-2003 Workbook", "*.xls")]
+        )
+
+        # If cancel was selected, set None and return
+        if filepath is None or filepath == "":
+            self.applicationMessage("File selection was cancelled by the user.")
+            return
+        self.applicationMessage("Selected old-format file '" + \
+            filepath + "'")
+
+        # Ask where to save the generated sheet
+        # Get default filename
+        default_name = DEFAULT_ROUTE_INFO_PREFIX + getDateString() + ".xlsx"
+
+        # Save-As dialog
+        save_filepath = asksaveasfilename(
+            title="Save Ride Checks Workbook",
+            initialfile=default_name, 
+            defaultextension=".xlsx", 
+            filetypes=[("Excel Workbook", "*.xlsx")]
+        )
+
+        # Check for 'cancel', if true return
+        if save_filepath is None or save_filepath == "":
+            self.applicationMessage("File selection was cancelled by the user.")
+            return
+
+        # Run the utility
+        self.applicationMessage("Updating old-format document...")
+        self.update()
+        try:
+            convertWorkbook(filepath, save_filepath)
+            self.applicationMessage("Successfully converted workbook.")
+        except:
+            self.applicationMessage("Workbook update failed.")
+            print(traceback.format_exc())
 
 
     def setRideChecks(self):
