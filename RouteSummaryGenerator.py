@@ -415,10 +415,6 @@ class Route:
                         str(datetime) + " stop " + str(stop_no) + \
                         ": The load has dropped below 0 (check for bad data)")
 
-        # Output a warning if the last load does not 0 out
-        if current_load != 0:
-            self.log.logWarning("Route " + str(self.route) + " Current load did not 0 out at the end of the last route. Counts may be incorrect.")
-
     def getDescriptorAndDirection(self) -> str:
         """
         @returns A string representation of this routes descriptor and direction
