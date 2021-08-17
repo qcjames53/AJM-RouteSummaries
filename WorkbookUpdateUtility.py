@@ -32,8 +32,9 @@ class ExcelApplication:
 
         # Save the new book
         self.app.DisplayAlerts = False
-        wb.SaveAs(new_filepath)
+        wb.SaveAs(new_filepath, FileFormat = 51, ConflictResolution=2)
         wb.Close()
+        self.app.DisplayAlerts = True
 
 def convertWorkbook(old_filepath, new_filepath):
     # Update the document format from .xls to .xlsx
