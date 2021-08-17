@@ -13,6 +13,7 @@ from tkinter.filedialog import askopenfilename
 from datetime import date, datetime
 import webbrowser
 import traceback
+import os
 
 from TemplateGeneratorRideChecks import createTemplateRideChecks
 from TemplateGeneratorRouteInfo import createTemplateRouteSummary
@@ -90,7 +91,7 @@ class MainWindow(tkinter.Frame):
         generateMenu.add_command(label="Route Information",
             command=self.createRouteInfo)
         templateMenu.add_cascade(label="Generate Template", menu=generateMenu)
-        templateMenu.add_command(label="Old Format Comversion", 
+        templateMenu.add_command(label="Old Format Conversion", 
             command=self.convertOldFormat)
         menu.add_cascade(label="Utility", menu=templateMenu)
 
@@ -211,7 +212,8 @@ class MainWindow(tkinter.Frame):
 
         # Ask where to save the generated sheet
         # Get default filename
-        default_name = DEFAULT_ROUTE_INFO_PREFIX + getDateString() + ".xlsx"
+        filename = os.path.splitext(os.path.basename(filepath))[0]
+        default_name = filename + ".xlsx"
 
         # Save-As dialog
         save_filepath = asksaveasfilename(

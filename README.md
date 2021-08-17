@@ -8,6 +8,7 @@ Launch the application by running the python script 'MainUI.py'.
 Note that this program has the following dependencies:
 * [Python 3.9.5](https://www.python.org/downloads/release/python-395/)
 * [openpyxl](https://openpyxl.readthedocs.io/en/stable/) - Install with 'pip install openpyxl'
+* [pywin](https://pypi.org/project/pywin/) - Install with 'pip install pywin32'
 
 ---
 
