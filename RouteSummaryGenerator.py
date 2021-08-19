@@ -11,9 +11,6 @@ import openpyxl
 import datetime
 from enum import Enum
 
-# Constants
-LOG_SHEET_TITLE = "Log"
-
 # Route direction enum
 class Direction(Enum):
     IB = "IB" # inbound
@@ -48,59 +45,11 @@ def stringToDirection(dir_string) -> Direction:
     return direction
 
 
-class Log:
-    """
-    A log used to display important messages to the end user.
-    """
-    def __init__(self, log_sheet) -> None:
-        """
-        Initialize the log with the proper local variables.
-
-        @param log_sheet The sheet containing the log
-        """
-        self.log_sheet = log_sheet
-        self.log_row = 1
-        self.creation_time = datetime.datetime.now()
-
-        # Make headers
-        self.log_sheet.column_dimensions["A"].width = 14
-        self.log_sheet.column_dimensions["B"].width = 200
-        self.log_sheet["A1"] = "Elapsed time"
-        self.log_sheet["B1"] = "Message"
-
-    def logMessage(self, message) -> None:
-        """
-        Logs a message to the log sheet.
-
-        @param message A string representing the message to log.
-        """
-        time_elapsed = datetime.datetime.now() - self.creation_time
-        self.log_sheet["A" + str(self.log_row)] = str(time_elapsed)
-        self.log_sheet["B" + str(self.log_row)] = message
-        self.log_row += 1
-
-    def logWarning(self, message) -> None:
-        """
-        Logs a warning to the log sheet.
-
-        @param message A string representing the message to log.
-        """
-        self.logMessage("[WARNING] " + message)
-
-    def logError(self, message) -> None:
-        """
-        Logs an error to the log sheet.
-
-        @param message A string representing the message to log.
-        """
-        self.logMessage("[ERROR] " + message)
-
-
 class RouteManager:
     """ 
     A class that allows for easy storage of routes and their respective data
     """
-    def __init__(self, log:Log) -> None:
+    def __init__(self, log) -> None:
         """
         Initilize RouteManager with the appropriate internal variables
         
@@ -290,7 +239,7 @@ class Route:
     """
     A class that allows for easy storage of the stops inside of a route
     """
-    def __init__(self, route, log:Log) -> None:
+    def __init__(self, route, log) -> None:
         """
         Initialize Route with the appropriate internal variables
         
@@ -806,7 +755,7 @@ class Stop:
             col += 3
         
 
-def generateSummary(ride_checks_filepath, route_info_filepath, 
+def generateSummary(log, ride_checks_filepath, route_info_filepath, 
     output_filepath) -> int:
     """
     Creates an output workbook from the provided input workbooks. See the README
@@ -826,17 +775,13 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     wb = openpyxl.Workbook()
     wb.iso_dates = True
 
-    # Set up debug/message log
-    log_sheet = wb.active
-    log_sheet.title = LOG_SHEET_TITLE
-    log = Log(log_sheet)
-    log.logMessage("Document created at " + str(datetime.datetime.now()))
+    log.logGeneral("Document created at " + str(datetime.datetime.now()))
 
     # Try to open the ride checks file, if can't return major error
     try:
         ride_checks_wb = openpyxl.load_workbook(filename=ride_checks_filepath)
     except Exception:
-        log.logMessage("[ERROR] Could not open the ride checks workbook '" +\
+        log.logError("Could not open the ride checks workbook '" +\
             ride_checks_filepath + "'")
         
         # Try to save the output file
@@ -851,7 +796,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     try:
         route_info_wb = openpyxl.load_workbook(filename=route_info_filepath)
     except Exception:
-        log.logMessage("[ERROR] Could not open the route info workbook '" +\
+        log.logError("Could not open the route info workbook '" +\
             route_info_filepath + "'")
         
         # Try to save the output file
@@ -865,7 +810,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     route_manager = RouteManager(log)
 
     # parse the route info file to create route names and times
-    log.logMessage("Parsing route info file")
+    log.logGeneral("Parsing route info file")
     current_route = None
     current_direction = None
     current_route_name = None
@@ -895,7 +840,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
             route_manager.addStop(current_route, stop_no, street, cross_street)
 
     # start parsing the ride checks file
-    log.logMessage("Parsing ride checks file")
+    log.logGeneral("Parsing ride checks file")
     current_row = 2
     prev_seq = 0
     while(ride_checks.cell(row=current_row, column=1).value is not None):
@@ -1014,34 +959,34 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
         current_row += 1
 
     # Generate load data
-    log.logMessage("Building load data")
+    log.logGeneral("Building load data")
     route_manager.buildLoad()
 
     # DEBUG - Print all routes & stops & data
     # print(str(route_manager))
 
     # Generate route totals sheet
-    log.logMessage("Generating route totals")
+    log.logGeneral("Generating route totals")
     routeTotalsSheet = wb.create_sheet("Rte Totals")
     route_manager.buildRouteTotals(routeTotalsSheet)
 
     # Generate max load sheet
-    log.logMessage("Generating max load sheet")
+    log.logGeneral("Generating max load sheet")
     maxLoadSheet = wb.create_sheet("Max Load")
     route_manager.buildMaxLoads(maxLoadSheet)
 
     # Generate totals by stop sheet
-    log.logMessage("Generating route totals per stop")
+    log.logGeneral("Generating route totals per stop")
     maxLoadSheet = wb.create_sheet("Ons Offs Tot & Ld")
     route_manager.buildRouteTotalsByStop(maxLoadSheet)
 
     # Generate the on-time detail
-    log.logMessage("Generating on-time detail")
+    log.logGeneral("Generating on-time detail")
     onTimeSheet = wb.create_sheet("On Time Detail")
     route_manager.buildOnTimeDetail(onTimeSheet)
 
     # Generate the detail report
-    log.logMessage("Generating detail report")
+    log.logGeneral("Generating detail report")
     detailReportSheet = wb.create_sheet("Detail Report")
     route_manager.buildDetailReport(detailReportSheet)
 
@@ -1049,7 +994,7 @@ def generateSummary(ride_checks_filepath, route_info_filepath,
     wb.create_sheet("Notes")
 
     # Generation complete
-    log.logMessage("Generation complete")
+    log.logGeneral("Generation complete")
 
     # Try to save the output file
     try:

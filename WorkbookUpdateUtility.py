@@ -10,6 +10,7 @@
 #   https://github.com/qcjames53/AJM-RouteSummaries
 
 import win32com.client
+import openpyxl
 
 # CONSTANTS
 DEBUG = True    # Whether Excel should be visible when updating document format
@@ -36,8 +37,31 @@ class ExcelApplication:
         wb.Close()
         self.app.DisplayAlerts = True
 
-def convertWorkbook(old_filepath, new_filepath):
+def convertFormat(log, old_filepath, new_filepath) -> None:
+    '''
+    Updates an excel document from .xls to .xlsx format without modifying
+    the document contents.
+
+    @param old_filepath The filepath for the document to open
+    @param new_filepath The filepath for the document to save
+    '''
     # Update the document format from .xls to .xlsx
     excelApp = ExcelApplication()
     excelApp.convertToXLSX(old_filepath, new_filepath)
+
+def convertValues(log, filepath, save_filepath=None) -> None:
+    '''
+    Updates the values of a .xlsx workbook to match the required format.
+    Numerical dates and times become excel-format dates and times.
+
+    @param filepath The filepath of the excel document.
+    @param save_filepath Optional: The filepath to save the document to
+    '''
+    # Load the file
+    try:
+        wb = openpyxl.load_workbook(filename=filepath)
+    except:
+        log.logError("Could not load the workbook")
+        return
+    ride_checks = wb.active
 

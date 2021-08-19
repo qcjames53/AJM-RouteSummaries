@@ -7,6 +7,6 @@
 
 from tkinter import messagebox
 
-def createTemplateRouteSummary(filepath):
+def createTemplateRouteSummary(log, filepath):
     messagebox.showinfo("Route Summary Template Generation", 
         "This feature coming soon...")
