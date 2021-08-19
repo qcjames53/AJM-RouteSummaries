@@ -100,6 +100,7 @@ class Log:
         location = getframeinfo(stack()[1][0])
         self.logMessage(Severity.FAILURE, message, location)
 
+
 class LogMessage:
     def __init__(self, log_method, severity: Severity, message: str, \
         location: Traceback) -> None:
@@ -294,7 +295,7 @@ class MainWindow(tkinter.Frame):
         filepath = askopenfilename(
             title="Select Old-format Workbook", 
             filetypes=[
-                ("Excel 1995-2003 Workbook", "*.xls"), 
+                ("Excel 97-2003 Workbook", "*.xls"), 
                 ("Excel Workbook", "*.xlsx")
                 ]
         )
@@ -328,7 +329,7 @@ class MainWindow(tkinter.Frame):
 
         # Update to .xlsx if neccesary
         if extension == ".xls":
-            self.log.logGeneral("Updating Excel 1995-2003 .xls document...")
+            self.log.logGeneral("Updating Excel 97-2003 .xls document...")
             self.update()
             try:
                 convertFormat(self.log, filepath, save_filepath)
@@ -339,12 +340,12 @@ class MainWindow(tkinter.Frame):
 
         # Update the internal values
         self.log.logGeneral("Updating workbook values to current format.")
+        self.update()
         try:
             if extension == ".xls":
                 convertValues(self.log, save_filepath)
             else:
                 convertValues(self.log, filepath, save_filepath=save_filepath)
-            self.log.logGeneral("Successfully updated the workbook.")
         except:
             self.log.logFailure("Workbook value update failed.")
             print(traceback.format_exc())
