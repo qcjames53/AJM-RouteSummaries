@@ -16,17 +16,18 @@ import traceback
 import os
 
 from TemplateGeneratorRideChecks import createTemplateRideChecks
-from TemplateGeneratorRouteInfo import createTemplateRouteSummary
+from TemplateGeneratorBusStop import createTemplateBusStop
 from RouteSummaryGenerator import generateSummary
 from WorkbookUpdateUtility import convertFormat, convertValues
 from Log import Log
 
 # Constants
+UPDATE_AFTER_LOG = True
 DEFAULT_WINDOW_WIDTH = 1200
 DEFAULT_WINDOW_HEIGHT = 500
 REPO_URL = "https://github.com/qcjames53/AJM-RouteSummaries"
 DEFUALT_RIDECHECKS_PREFIX = "ridechecks"
-DEFAULT_ROUTE_INFO_PREFIX = "routeinfo"
+DEFAULT_BUS_STOP_PREFIX = "busstop"
 DEFAULT_ROUTE_SUMMARY_PREFIX = "summary"
 
 def getDateString():
@@ -61,7 +62,7 @@ class MainWindow(tkinter.Frame):
         """
         # Non-tkinter member variables
         self.ride_checks_filepath = None
-        self.route_info_filepath = None
+        self.bus_stop_filepath = None
 
         # Handle instantiation
         tkinter.Frame.__init__(self, master)
@@ -77,8 +78,8 @@ class MainWindow(tkinter.Frame):
         selectMenu = tkinter.Menu(fileMenu)
         selectMenu.add_command(label="Ride Checks", 
             command=self.setRideChecks)
-        selectMenu.add_command(label="Route Information",
-            command=self.setRouteInfo)
+        selectMenu.add_command(label="Bus Stop",
+            command=self.setBusStop)
         fileMenu.add_cascade(label="Select Input File", menu=selectMenu)
         fileMenu.add_command(label="Exit", command=self.exitProgram)
         menu.add_cascade(label="File", menu=fileMenu)
@@ -88,8 +89,8 @@ class MainWindow(tkinter.Frame):
         generateMenu = tkinter.Menu(templateMenu)
         generateMenu.add_command(label="Ride Checks", 
             command=self.createRideChecks)
-        generateMenu.add_command(label="Route Information",
-            command=self.createRouteInfo)
+        generateMenu.add_command(label="Bus Stop",
+            command=self.createBusStop)
         templateMenu.add_cascade(label="Generate Template", menu=generateMenu)
         templateMenu.add_command(label="Old Format Conversion", 
             command=self.convertOldFormat)
@@ -137,6 +138,9 @@ class MainWindow(tkinter.Frame):
         @param message A string to display to the user
         """
         self.log_text.insert(tkinter.END, "\n" + message)
+        self.log_text.yview_scroll(1, "units")
+        if UPDATE_AFTER_LOG:
+            self.update()
 
     
     def createRideChecks(self):
@@ -165,17 +169,17 @@ class MainWindow(tkinter.Frame):
         + " '" + save_filepath + "'")
 
     
-    def createRouteInfo(self):
+    def createBusStop(self):
         """
-        Opens a save-as dialog and creates a route info template at the
+        Opens a save-as dialog and creates a bus stop template at the
         provided location.
         """
         # Get default filename
-        default_name = DEFAULT_ROUTE_INFO_PREFIX + getDateString() + ".xlsx"
+        default_name = DEFAULT_BUS_STOP_PREFIX + getDateString() + ".xlsx"
 
         # Save-As dialog
         save_filepath = asksaveasfilename(
-            title="Save Route Info Workbook",
+            title="Save Bus Stop Workbook",
             initialfile=default_name, 
             defaultextension=".xlsx", 
             filetypes=[("Excel Workbook", "*.xlsx")]
@@ -186,8 +190,8 @@ class MainWindow(tkinter.Frame):
             return
 
         # Write the file, alert the user
-        createTemplateRouteSummary(self.log, save_filepath)
-        self.log.logGeneral("Successfully created the route info template"\
+        createTemplateBusStop(self.log, save_filepath)
+        self.log.logGeneral("Successfully created the bus stop template"\
             + " '" + save_filepath + "'")
 
     
@@ -281,32 +285,32 @@ class MainWindow(tkinter.Frame):
             self.ride_checks_filepath + "'")
 
 
-    def setRouteInfo(self):
+    def setBusStop(self):
         """
-        Asks the user to select a route info workbook. Sets the route info
+        Asks the user to select a bus stop workbook. Sets the bus stop
         member variable to match. Sets to None if cancelled.
         """
         # Ask the user for the ride checks workbook
         filepath = askopenfilename(
-            title="Select Route Info Workbook",
+            title="Select Bus Stop Workbook",
             filetypes=[("Excel Workbook", "*.xlsx")]
         )
 
         # If cancel was selected, set None and return
         if filepath is None or filepath == "":
-            self.route_info_filepath = None
+            self.bus_stop_filepath = None
             return
         
         # Set the member variable to the selected filepath, alert the user
-        self.route_info_filepath = filepath
-        self.log.logGeneral("Selected route info file '" + \
-            self.route_info_filepath + "'")
+        self.bus_stop_filepath = filepath
+        self.log.logGeneral("Selected bus stop file '" + \
+            self.bus_stop_filepath + "'")
 
 
     def runRouteSummary(self):
         """
         Runs the route summary generator with the selected filepaths. Will
-        run setRideCheck and/or setRouteInfo if the respective filepaths have
+        run setRideCheck and/or setBusStop if the respective filepaths have
         not been set.
         """
         # Get the respective sheet filepaths if they haven't been selected
@@ -317,11 +321,11 @@ class MainWindow(tkinter.Frame):
             if self.ride_checks_filepath is None:
                 self.log.logGeneral("Route summary generation was cancelled by the user.")
                 return
-        if self.route_info_filepath is None:
-            self.setRouteInfo()
+        if self.bus_stop_filepath is None:
+            self.setBusStop()
 
             # check a valid filepath was submitted. If not, exit.
-            if self.route_info_filepath is None:
+            if self.bus_stop_filepath is None:
                 self.log.logGeneral("Route summary generation was cancelled by the user.")
                 return
 
@@ -347,7 +351,7 @@ class MainWindow(tkinter.Frame):
         self.update()
         try:
             summary_generation_result = generateSummary(self.log, \
-                self.ride_checks_filepath, self.route_info_filepath, \
+                self.ride_checks_filepath, self.bus_stop_filepath, \
                 save_filepath)
             # Console message for the correct result
             if(summary_generation_result == 0):
@@ -366,7 +370,7 @@ class MainWindow(tkinter.Frame):
             print(traceback.format_exc())
 
         # Reset the selected filepaths
-        self.route_info_filepath = None
+        self.bus_stop_filepath = None
         self.ride_checks_filepath = None
         
 

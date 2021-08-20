@@ -757,14 +757,14 @@ class Stop:
             col += 3
         
 
-def generateSummary(log:Log, ride_checks_filepath, route_info_filepath, 
+def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath, 
     output_filepath) -> int:
     """
     Creates an output workbook from the provided input workbooks. See the README
     for more information on how this function operates.
 
     @param ride_checks_filepath The filepath for the ridechecks workbook
-    @param route_info_filepath The filepath for the route info workbook
+    @param bus_stop_filepath The filepath for the bus stop workbook
     @param output_filepath The filepath for the output workbook
 
     @returns An integer representing the status of the output workbook:
@@ -794,12 +794,12 @@ def generateSummary(log:Log, ride_checks_filepath, route_info_filepath,
         return 1
     ride_checks = ride_checks_wb.active
 
-    # Try to open the route info file, if can't return major error
+    # Try to open the bus stop file, if can't return major error
     try:
-        route_info_wb = openpyxl.load_workbook(filename=route_info_filepath)
+        bus_stop_wb = openpyxl.load_workbook(filename=bus_stop_filepath)
     except Exception:
-        log.logError("Could not open the route info workbook '" +\
-            route_info_filepath + "'")
+        log.logError("Could not open the bus stop workbook '" +\
+            bus_stop_filepath + "'")
         
         # Try to save the output file
         try:
@@ -807,25 +807,25 @@ def generateSummary(log:Log, ride_checks_filepath, route_info_filepath,
         except Exception:
             return 2
         return 1
-    route_info = route_info_wb.worksheets[0]
+    bus_stop = bus_stop_wb.worksheets[0]
 
     route_manager = RouteManager(log)
 
-    # parse the route info file to create route names and times
-    log.logGeneral("Parsing route info file")
+    # parse the bus stop file to create route names and times
+    log.logGeneral("Parsing bus stop file")
     current_route = None
     current_direction = None
     current_route_name = None
 
-    for current_row in range(1,route_info.max_row + 1):
+    for current_row in range(1,bus_stop.max_row + 1):
         # Check for new route header
-        if route_info.cell(row=current_row, column=8).value == "ROUTE":
+        if bus_stop.cell(row=current_row, column=8).value == "ROUTE":
             # Get info of the new route
-            current_route = route_info.cell(row=current_row, column=10).value
+            current_route = bus_stop.cell(row=current_row, column=10).value
             current_route_name = \
-                route_info.cell(row=current_row, column=4).value
+                bus_stop.cell(row=current_row, column=4).value
             current_direction = stringToDirection(
-                route_info.cell(row=current_row + 1, column=10).value)
+                bus_stop.cell(row=current_row + 1, column=10).value)
 
             # Set the route data
             route_manager.setRouteData(current_route, current_route_name, current_direction)
@@ -835,10 +835,10 @@ def generateSummary(log:Log, ride_checks_filepath, route_info_filepath,
             continue
 
         # If stop number is numberical, add this row
-        stop_no = route_info.cell(row=current_row, column=5).value
+        stop_no = bus_stop.cell(row=current_row, column=5).value
         if isinstance(stop_no, int):
-            street = route_info.cell(row=current_row, column=3).value
-            cross_street = route_info.cell(row=current_row, column=4).value
+            street = bus_stop.cell(row=current_row, column=3).value
+            cross_street = bus_stop.cell(row=current_row, column=4).value
             route_manager.addStop(current_route, stop_no, street, cross_street)
 
     # start parsing the ride checks file

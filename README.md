@@ -13,7 +13,7 @@ Note that this program has the following dependencies:
 ---
 
 ## Program Inputs
-Route Summaries requires two Microsoft Excel workbook files as input to properly produce summaries: A ride checks data file and a route information file. Template files can be created through the program menu.
+Route Summaries requires two Microsoft Excel workbook files as input to properly produce summaries: A ride checks data file and a bus stop file. Template files can be created through the program menu.
 
 #### Ride Checks Data File
 An MS-Excel workbook containing any number of rows with row 0 reserved for fixed headers. Each row contains the following columns of data, representing one ride check data entry:
@@ -46,7 +46,7 @@ An MS-Excel workbook containing any number of rows with row 0 reserved for fixed
 * TIME CHECK (Optional)
     * The difference between the ARRIVAL TIME and the SCHEDULE TIME for this stop. This row is not used for program data but may be filled in for manual reference.
 
-#### Route Information File
+#### Bus Stop File
 An MS-Excel workbook containing one sheet which represents a ROUTE-DIRECTION combination of the form 'Rte #D' where # is the ROUTE and D is the DIRECTION as defined above in the [Ride Checks Data File section](https://github.com/qcjames53/AJM-RouteSummaries#ride-checks-data-file).
 
 The sheet may contain an unlimited number of column-aligned tables on arbitrary rows. The following information is required for each table header:
