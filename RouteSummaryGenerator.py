@@ -843,6 +843,8 @@ def generateSummary(log, ride_checks_filepath, route_info_filepath,
     log.logGeneral("Parsing ride checks file")
     current_row = 2
     prev_seq = 0
+    total_ons = 0
+    total_offs = 0
     while(ride_checks.cell(row=current_row, column=1).value is not None):
         # get data
         sequence = ride_checks.cell(row=current_row, column=1).value
@@ -955,9 +957,19 @@ def generateSummary(log, ride_checks_filepath, route_info_filepath,
         if not add_data_result:
             log.logError("Row " + str(current_row) + ": Add data failure.")
 
+        # increment total ons and offs
+        if ons is not None:
+            total_ons += ons
+        if offs is not None:
+            total_offs += offs
+
         # increment current row
         current_row += 1
 
+    # Check for total ons and offs being equal
+    if total_ons != total_offs:
+        log.logWarning(f"Total ons and offs are not equal ({total_ons} ons, {total_offs} offs). Check for bad data")
+    
     # Generate load data
     log.logGeneral("Building load data")
     route_manager.buildLoad()
