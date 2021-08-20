@@ -11,6 +11,8 @@ import openpyxl
 import datetime
 from enum import Enum
 
+from Log import Log
+
 # Route direction enum
 class Direction(Enum):
     IB = "IB" # inbound
@@ -49,7 +51,7 @@ class RouteManager:
     """ 
     A class that allows for easy storage of routes and their respective data
     """
-    def __init__(self, log) -> None:
+    def __init__(self, log:Log) -> None:
         """
         Initilize RouteManager with the appropriate internal variables
         
@@ -239,7 +241,7 @@ class Route:
     """
     A class that allows for easy storage of the stops inside of a route
     """
-    def __init__(self, route, log) -> None:
+    def __init__(self, route, log:Log) -> None:
         """
         Initialize Route with the appropriate internal variables
         
@@ -755,7 +757,7 @@ class Stop:
             col += 3
         
 
-def generateSummary(log, ride_checks_filepath, route_info_filepath, 
+def generateSummary(log:Log, ride_checks_filepath, route_info_filepath, 
     output_filepath) -> int:
     """
     Creates an output workbook from the provided input workbooks. See the README

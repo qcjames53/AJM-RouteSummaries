@@ -14,6 +14,8 @@ import openpyxl
 import math
 import datetime
 
+from Log import Log
+
 # CONSTANTS
 DEBUG = True    # Whether Excel should be visible when updating document format
 VALID_HEADERS = [
@@ -55,7 +57,7 @@ class ExcelApplication:
         wb.Close()
         self.app.DisplayAlerts = True
 
-def convertFormat(log, old_filepath, new_filepath) -> None:
+def convertFormat(log:Log, old_filepath, new_filepath) -> None:
     '''
     Updates an excel document from .xls to .xlsx format without modifying
     the document contents.
@@ -67,7 +69,7 @@ def convertFormat(log, old_filepath, new_filepath) -> None:
     excelApp = ExcelApplication()
     excelApp.convertToXLSX(old_filepath, new_filepath)
 
-def convertValues(log, filepath, save_filepath=None) -> None:
+def convertValues(log:Log, filepath, save_filepath=None) -> None:
     '''
     Updates the values of a .xlsx workbook to match the required format.
     Numerical dates and times become excel-format dates and times.

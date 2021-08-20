@@ -7,10 +7,12 @@
 
 import openpyxl
 
+from Log import Log
+
 # Constants
 SHEET_TITLE = "Ride Checks"
 
-def createTemplateRideChecks(log, filepath):
+def createTemplateRideChecks(log:Log, filepath):
     # Create output workbook / sheet
     wb = openpyxl.Workbook()
     sheet = wb.active
