@@ -206,8 +206,7 @@ class MainWindow(tkinter.Frame):
         filepath = askopenfilename(
             title="Select Old-format Workbook", 
             filetypes=[
-                ("Excel 97-2003 Workbook", "*.xls"), 
-                ("Excel Workbook", "*.xlsx")
+                ("Excel Workbook", "*.xls *.xlsx"), 
                 ]
         )
 
