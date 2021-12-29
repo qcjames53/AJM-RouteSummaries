@@ -10,5 +10,6 @@ from tkinter import messagebox
 from Log import Log
 
 def createTemplateBusStop(log:Log, filepath):
+    # TODO - Potentially remove this option?
     messagebox.showinfo("Bus Stop Template Generation", 
         "This feature coming soon...")
