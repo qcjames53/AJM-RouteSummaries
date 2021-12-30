@@ -84,7 +84,7 @@ class MainWindow(tkinter.Frame):
         fileMenu.add_command(label="Exit", command=self.exitProgram)
         menu.add_cascade(label="File", menu=fileMenu)
 
-        # Create Template Menu
+        # Create Utility Menu
         templateMenu = tkinter.Menu(menu)
         generateMenu = tkinter.Menu(templateMenu)
         generateMenu.add_command(label="Ride Checks", 
@@ -94,6 +94,8 @@ class MainWindow(tkinter.Frame):
         templateMenu.add_cascade(label="Generate Template", menu=generateMenu)
         templateMenu.add_command(label="Old Format Conversion", 
             command=self.convertOldFormat)
+        templateMenu.add_command(label="Clear Displayed Log", 
+            command=self.clearLog)
         menu.add_cascade(label="Utility", menu=templateMenu)
 
         # Create Run Button
@@ -101,7 +103,7 @@ class MainWindow(tkinter.Frame):
 
         # Create Help Menu
         helpMenu = tkinter.Menu(menu)
-        helpMenu.add_command(label="Open Repository", 
+        helpMenu.add_command(label="Open Documentation", 
             command=self.openRepository)
         menu.add_cascade(label="Help", menu=helpMenu)
 
@@ -141,6 +143,14 @@ class MainWindow(tkinter.Frame):
         self.log_text.yview_scroll(1, "units")
         if UPDATE_AFTER_LOG:
             self.update()
+
+    
+    def clearLog(self):
+        """
+        Clears the log messages
+        """
+        self.log_text.delete("1.0","end")
+        self.update()
 
     
     def createRideChecks(self):
