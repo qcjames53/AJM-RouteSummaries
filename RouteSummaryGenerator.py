@@ -891,7 +891,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
             log.logError("Row " + str(current_row) + ": Direction '" + \
                 str(direction) + "' is not a valid input. Skipping row.")
             current_row += 1
-            continue
+            continue 
         if (not isinstance(start_time, datetime.time)):
             log.logError("Row " + str(current_row) + ": Start time '" + \
                 str(start_time) + "' is not an excel-formatted time. " + \

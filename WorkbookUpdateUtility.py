@@ -19,14 +19,14 @@ from Log import Log
 # CONSTANTS
 DEBUG = True    # Whether Excel should be visible when updating document format
 VALID_HEADERS = [
-    ["sequence", "seq"],
+    ["sequence", "seq", "seq #"],
     ["date"],
     ["route"],
     ["direction", "dir"],
     ["run"],
     ["start time", "start"],
     ["onboard", "ob"],
-    ["stop number", "stop no", "stp number", "stp no", "stop", "stp"],
+    ["stop number", "stop no", "stp number", "stp no", "stop", "stp", "stop #", "stp #"],
     ["arrival time", "arrive time", "arrival", "arrive"],
     ["schedule time", "sched time", "schedule", "sched"],
     ["offs", "departures", "departure"],
