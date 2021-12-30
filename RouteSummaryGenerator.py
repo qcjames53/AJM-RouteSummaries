@@ -21,6 +21,7 @@ class Direction(Enum):
     SB = "SB" # southbound
     EB = "EB" # eastbound
     WB = "WB" # westbound
+    LP = "LP" # loop
     UN = "UN" # unknown
 
 # Utility functions
@@ -44,6 +45,8 @@ def stringToDirection(dir_string) -> Direction:
         direction = Direction.EB
     elif dir_string == "WB":
         direction = Direction.WB
+    elif dir_string == "LP":
+        direction = Direction.LP
     return direction
 
 
