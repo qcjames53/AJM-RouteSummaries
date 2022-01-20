@@ -780,12 +780,12 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
     wb = openpyxl.Workbook()
     wb.iso_dates = True
 
-    log.logGeneral("Document created at " + str(datetime.datetime.now()))
+    log.logGeneral("Output document created")
 
     # Try to open the ride checks file, if can't return major error
     log.logGeneral("Opening ride checks workbook")
     try:
-        ride_checks_wb = openpyxl.load_workbook(filename=ride_checks_filepath)
+        ride_checks_wb = openpyxl.load_workbook(filename=ride_checks_filepath, data_only=True)
     except Exception:
         log.logError("Could not open the ride checks workbook '" +\
             ride_checks_filepath + "'")
@@ -801,7 +801,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
     # Try to open the bus stop file, if can't return major error
     log.logGeneral("Opening bus stop workbook")
     try:
-        bus_stop_wb = openpyxl.load_workbook(filename=bus_stop_filepath)
+        bus_stop_wb = openpyxl.load_workbook(filename=bus_stop_filepath, data_only=True)
     except Exception:
         log.logError("Could not open the bus stop workbook '" +\
             bus_stop_filepath + "'")
