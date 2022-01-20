@@ -137,4 +137,4 @@ Each route is prefaced by a row titled 'ONBOARD'. This row represents the total 
 An additional sheet used to detail operational details which may affect the collected data. This data is manually added after workbook generation.
 
 ## Project License
-This project is proprietary. Copyright 2021 by AJM & Associates LLC.
+This project is proprietary. Copyright 2021-2022 by AJM & Associates LLC.
