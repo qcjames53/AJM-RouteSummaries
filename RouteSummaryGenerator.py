@@ -783,6 +783,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
     log.logGeneral("Document created at " + str(datetime.datetime.now()))
 
     # Try to open the ride checks file, if can't return major error
+    log.logGeneral("Opening ride checks workbook")
     try:
         ride_checks_wb = openpyxl.load_workbook(filename=ride_checks_filepath)
     except Exception:
@@ -798,6 +799,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
     ride_checks = ride_checks_wb.active
 
     # Try to open the bus stop file, if can't return major error
+    log.logGeneral("Opening bus stop workbook")
     try:
         bus_stop_wb = openpyxl.load_workbook(filename=bus_stop_filepath)
     except Exception:
