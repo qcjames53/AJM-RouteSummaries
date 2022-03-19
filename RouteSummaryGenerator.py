@@ -181,12 +181,22 @@ class RouteManager:
         @param worksheet The excel worksheet to operate on
         """
         # Display headers
-        worksheet["A1"] = "Route No."
-        worksheet["B1"] = "Route"
-        worksheet["C1"] = "Start Time"
-        worksheet["D1"] = "Ons"
-        worksheet["E1"] = "Offs"
-        worksheet["F1"] = "Max Load"
+        worksheet["A1"] = "Route #"
+        worksheet["A1"].alignment = Alignment(horizontal="right")
+        worksheet["C1"] = "Route"
+        worksheet["D1"] = "Start Time"
+        worksheet["E1"] = "Ons"
+        worksheet["E1"].alignment = Alignment(horizontal="right")
+        worksheet["F1"] = "Offs"
+        worksheet["F1"].alignment = Alignment(horizontal="right")
+        worksheet["G1"] = "Max Load"
+        worksheet["G1"].alignment = Alignment(horizontal="right")
+
+        # Set the width of the columns
+        worksheet.column_dimensions["A"].width = 8
+        worksheet.column_dimensions["B"].width = 1
+        worksheet.column_dimensions["C"].width = 30
+        worksheet.column_dimensions["D"].width = 10
 
         # Display values
         current_row = 2
@@ -201,21 +211,45 @@ class RouteManager:
 
         @param worksheet The excel worksheet to operate on
         """
-        worksheet["A1"] = "Route"
-        worksheet["B1"] = "Route Name"
-        worksheet["C1"] = "Stop"
-        worksheet["D1"] = "Street"
-        worksheet["E1"] = "Cross Street"
-        worksheet["F1"] = "Ons"
-        worksheet["G1"] = "Offs"
-        worksheet["H1"] = "Total"
-        worksheet["I1"] = "Load"
+        # Set the width of the columns
+        worksheet.column_dimensions["A"].width = 8
+        worksheet.column_dimensions["B"].width = 1
+        worksheet.column_dimensions["C"].width = 20
+        worksheet.column_dimensions["D"].width = 10
+        worksheet.column_dimensions["E"].width = 1
+        worksheet.column_dimensions["F"].width = 15
+        worksheet.column_dimensions["G"].width = 15
 
         # Display values
-        current_row = 2
+        current_row = 0
         for route in sorted(self.routes.keys()):
+            # Display headers
+            current_row += 1
+            worksheet.cell(row=current_row, column=1).value = "Route #"
+            worksheet.cell(row=current_row, column=1).alignment = \
+                Alignment(horizontal="right")
+            worksheet.cell(row=current_row, column=3).value = "Route"
+            worksheet.cell(row=current_row, column=4).value = "Stop"
+            worksheet.cell(row=current_row, column=4).alignment = \
+                Alignment(horizontal="right")
+            worksheet.cell(row=current_row, column=6).value = "Street"
+            worksheet.cell(row=current_row, column=7).value = "Cross Street"
+            worksheet.cell(row=current_row, column=8).value = "Ons"
+            worksheet.cell(row=current_row, column=8).alignment = \
+                Alignment(horizontal="right")
+            worksheet.cell(row=current_row, column=9).value = "Offs"
+            worksheet.cell(row=current_row, column=9).alignment = \
+                Alignment(horizontal="right")
+            worksheet.cell(row=current_row, column=10).value = "Total"
+            worksheet.cell(row=current_row, column=10).alignment = \
+                Alignment(horizontal="right")
+            worksheet.cell(row=current_row, column=11).value = "Load"
+            worksheet.cell(row=current_row, column=11).alignment = \
+                Alignment(horizontal="right")
+
+            # Display stop information
             current_row = self.routes[route].buildRouteTotalsByStop(worksheet, \
-                current_row)
+                current_row + 1)
 
     def buildOnTimeDetail(self, worksheet) -> None:
         """
@@ -450,13 +484,13 @@ class Route:
 
             # Write data to sheet
             worksheet.cell(row=current_row, column=1).value = self.route
-            worksheet.cell(row=current_row, column=2).value = \
-                self.getDescriptorAndDirection()
             worksheet.cell(row=current_row, column=3).value = \
+                self.getDescriptorAndDirectionTrunc(29)
+            worksheet.cell(row=current_row, column=4).value = \
                 datetime.strftime("%H:%M")
-            worksheet.cell(row=current_row, column=4).value = ons
-            worksheet.cell(row=current_row, column=5).value = offs
-            worksheet.cell(row=current_row, column=6).value = max_load
+            worksheet.cell(row=current_row, column=5).value = ons
+            worksheet.cell(row=current_row, column=6).value = offs
+            worksheet.cell(row=current_row, column=7).value = max_load
 
             current_row += 1
         return current_row
@@ -469,6 +503,21 @@ class Route:
         @param current_row The row of the worksheet to start on
         @returns The next empty row in the worksheet
         """
+        # Include the onboard row
+        worksheet.cell(row=current_row, column=1).value = self.route
+        worksheet.cell(row=current_row, column=3).value = \
+            self.getDescriptorAndDirectionTrunc(19)
+        worksheet.cell(row=current_row, column=4).value = 0
+        worksheet.cell(row=current_row, column=6).value = "Onboard"
+
+        # Get the total onboards for the route
+        onboard_total = 0
+        for time in self.onboard:
+            onboard_total += self.onboard[time]
+        worksheet.cell(row=current_row, column=11).value = onboard_total
+        current_row += 1
+
+        # Build totals for all stops
         for stop_no in self.stops:
             current_row = self.stops[stop_no].buildRouteTotalsByStop( \
                 worksheet, current_row)
@@ -663,6 +712,15 @@ class Stop:
         """
         return self.descriptor + " " + str(self.direction.value)
 
+    def getDescriptorAndDirectionTrunc(self, l) -> str:
+        """
+        @param l Length of the output string
+
+        @returns A truncated string representation of this routes descriptor and direction
+        """
+        remaining_l = max(0, l - len(str(self.direction.value)) - 1)
+        return self.descriptor[0:remaining_l] + " " + str(self.direction.value)
+
     def getRun(self, datetime) -> str:
         # If datetime does not exist, return None
         if datetime not in self.data:
@@ -723,15 +781,15 @@ class Stop:
 
         # Write data to sheet
         worksheet.cell(row=current_row, column=1).value = self.route
-        worksheet.cell(row=current_row, column=2).value = \
-            self.getDescriptorAndDirection()
-        worksheet.cell(row=current_row, column=3).value = self.stop_no
-        worksheet.cell(row=current_row, column=4).value = self.street
-        worksheet.cell(row=current_row, column=5).value = self.cross_street
-        worksheet.cell(row=current_row, column=6).value = ons
-        worksheet.cell(row=current_row, column=7).value = offs
-        worksheet.cell(row=current_row, column=8).value = total
-        worksheet.cell(row=current_row, column=9).value = load
+        worksheet.cell(row=current_row, column=3).value = \
+            self.getDescriptorAndDirectionTrunc(19)
+        worksheet.cell(row=current_row, column=4).value = self.stop_no
+        worksheet.cell(row=current_row, column=6).value = str(self.street)[0:14]
+        worksheet.cell(row=current_row, column=7).value = str(self.cross_street)[0:14]
+        worksheet.cell(row=current_row, column=8).value = ons
+        worksheet.cell(row=current_row, column=9).value = offs
+        worksheet.cell(row=current_row, column=10).value = total
+        worksheet.cell(row=current_row, column=11).value = load
 
         return current_row + 1
 
