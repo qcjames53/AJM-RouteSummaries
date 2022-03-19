@@ -258,13 +258,22 @@ class RouteManager:
 
         @param worksheet The excel worksheet to operate on
         """
-        worksheet["A1"] = "Route"
-        worksheet["B1"] = "Route Name"
-        worksheet["C1"] = "Date"
-        worksheet["D1"] = "Time"
-        worksheet["E1"] = "Run"
+        # Display headers
+        worksheet["A1"] = "Route #"
+        worksheet["A1"].alignment = Alignment(horizontal="right")
+        worksheet["C1"] = "Route Name"
+        worksheet["D1"] = "Date"
+        worksheet["D1"].alignment = Alignment(horizontal="right")
+        worksheet["E1"] = "Time"
+        worksheet["E1"].alignment = Alignment(horizontal="right")
+        worksheet["F1"] = "Run"
+        worksheet["F1"].alignment = Alignment(horizontal="right")
 
-        worksheet.column_dimensions["C"].width = 11
+        # Set the width of the columns
+        worksheet.column_dimensions["A"].width = 8
+        worksheet.column_dimensions["B"].width = 1
+        worksheet.column_dimensions["C"].width = 12
+        worksheet.column_dimensions["D"].width = 11
 
         # Display values
         current_row = 2
@@ -536,12 +545,12 @@ class Route:
             return current_row
 
         # Build header
-        col = 6
+        col = 7
         for stop in self.timed_stops:
             worksheet.cell(row=current_row, column=col).value = \
-                self.stops[stop].street
+                self.stops[stop].street[0:7]
             worksheet.cell(row=current_row + 1, column=col).value = \
-                self.stops[stop].cross_street
+                self.stops[stop].cross_street[0:7]
             col += 1
         current_row += 2
 
@@ -549,17 +558,17 @@ class Route:
         for datetime in self.times:
             # Write route data to row
             worksheet.cell(row=current_row, column=1).value = self.route
-            worksheet.cell(row=current_row, column=2).value = \
-                self.getDescriptorAndDirection()
-            worksheet.cell(row=current_row, column=3).value = datetime.date()
-            worksheet.cell(row=current_row, column=4).value = datetime.time()
+            worksheet.cell(row=current_row, column=3).value = \
+                self.getDescriptorAndDirectionTrunc(10)
+            worksheet.cell(row=current_row, column=4).value = datetime.date()
+            worksheet.cell(row=current_row, column=5).value = datetime.time()
             
             # Write run number to row
-            worksheet.cell(row=current_row, column=5).value = \
+            worksheet.cell(row=current_row, column=6).value = \
                 self.stops[self.timed_stops[0]].getRun(datetime)
 
             # Write stop data to row
-            col = 6
+            col = 7
             for stop in self.timed_stops:
                 minutes_late = self.stops[stop].getMinutesLate(datetime)
                 # Handle error cases
@@ -726,7 +735,7 @@ class Stop:
         if datetime not in self.data:
             return None
 
-        return str(self.data[datetime][0])
+        return self.data[datetime][0]
 
     def getOffsAndOns(self, datetime) -> tuple:
         """
@@ -936,7 +945,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
         date = ride_checks.cell(row=current_row, column=2).value
         route = ride_checks.cell(row=current_row, column=3).value
         direction = ride_checks.cell(row=current_row, column=4).value
-        run = str(ride_checks.cell(row=current_row, column=5).value)
+        run = ride_checks.cell(row=current_row, column=5).value
         start_time = ride_checks.cell(row=current_row, column=6).value
         onboard = ride_checks.cell(row=current_row, column=7).value
         stop_number = ride_checks.cell(row=current_row, column=8).value
