@@ -8,6 +8,7 @@
 #   https://github.com/qcjames53/AJM-RouteSummaries
 
 import openpyxl
+from openpyxl.styles import Alignment
 import datetime
 from enum import Enum
 
@@ -143,24 +144,34 @@ class RouteManager:
         @param worksheet The excel worksheet to operate on
         """
         # Display headers
-        worksheet["A1"] = "Route No."
-        worksheet["B1"] = "Route"
-        worksheet["C1"] = "Ons"
-        worksheet["D1"] = "Offs"
-        worksheet["E1"] = "Total"
+        worksheet["A1"] = "Route #"
+        worksheet["A1"].alignment = Alignment(horizontal="right")
+        worksheet["C1"] = "Route"
+        worksheet["D1"] = "Ons"
+        worksheet["D1"].alignment = Alignment(horizontal="right")
+        worksheet["E1"] = "Offs"
+        worksheet["E1"].alignment = Alignment(horizontal="right")
+        worksheet["F1"] = "Total"
+        worksheet["F1"].alignment = Alignment(horizontal="right")
+
+        # Set the width of the columns
+        worksheet.column_dimensions["A"].width = 8
+        worksheet.column_dimensions["B"].width = 1
+        worksheet.column_dimensions["C"].width = 30
         
         # Display values
         current_row = 2
         for route in sorted(self.routes.keys()):
             offs, ons, total = self.routes[route].getTotalOffsAndOns()
             worksheet.cell(row=current_row, column=1).value = route
-            worksheet.cell(row=current_row, column=2).value = \
-                self.routes[route].getDescriptorAndDirection()
-            worksheet.cell(row=current_row, column=3).value = ons
-            worksheet.cell(row=current_row, column=4).value = offs
-            worksheet.cell(row=current_row, column=5).value = total
+            worksheet.cell(row=current_row, column=3).value = \
+                self.routes[route].getDescriptorAndDirectionTrunc(29)
+            worksheet.cell(row=current_row, column=4).value = ons
+            worksheet.cell(row=current_row, column=5).value = offs
+            worksheet.cell(row=current_row, column=6).value = total
 
             current_row += 1
+
 
     def buildMaxLoads(self, worksheet) -> None:
         """
@@ -374,6 +385,15 @@ class Route:
         @returns A string representation of this routes descriptor and direction
         """
         return self.descriptor + " " + str(self.direction.value)
+
+    def getDescriptorAndDirectionTrunc(self, l) -> str:
+        """
+        @param l Length of the output string
+
+        @returns A truncated string representation of this routes descriptor and direction
+        """
+        remaining_l = max(0, l - len(str(self.direction.value)) - 1)
+        return self.descriptor[0:remaining_l] + " " + str(self.direction.value)
 
     def getTotalOffsAndOns(self) -> tuple:
         """
@@ -983,6 +1003,10 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
 
     # DEBUG - Print all routes & stops & data
     # print(str(route_manager))
+
+    # Remove existing sheets
+    for s in wb.sheetnames:
+        wb.remove(wb[s])
 
     # Generate route totals sheet
     log.logGeneral("Generating route totals")
