@@ -1,0 +1,47 @@
+TODO
+
+---Remove first blank sheet
+---Key timed stops based on route info file shading
+
+Rte Totals:
+    ---Increase space for route name
+    ---Decrease width of route no column (A), rename to "Route #"
+    ---Right justify route no, ons, offs, total
+    ---Pad space between col A and B
+
+Max Load:
+    ---Increase space for route name
+    ---Decrease width of route no column (A), rename to "Route #"
+    ---Increase width of start time column (C)
+    ---Right justify route no, ons, offs, max load
+    ---Pad space between col A and B
+
+Ons Offs Totals and Load
+    ---Increase space for route name
+    ---Increase space for street names
+    ---Decrease width of route no column (A), rename to "Route #"
+    ---Right justify Route No., Stop, Ons, Offs, Total, Load
+    ---After each route, add row for totals
+        ---row for spacing
+        ---new headers
+        ---row for onboard number for next route
+    ---Shade timed stops
+
+On Time Detail
+    ---Truncate route name
+    ---Truncate street names
+    ---Decrease width of route no column (A), rename to "Route #"
+    ---Right justify Route No., Date, Time, Run
+    ---Handle None type for Run column, output as number
+    ---Right justify run numbers
+
+Detail report:
+    ---totals at bottom
+    ---order by time instead of datetime
+    ---Truncate street names
+    ---Above route number, print city name + month
+    ---Rename Route # to Route No.
+    Change to 12hr time
+
+Old format conversion:
+    ---Check for not adding a bunch of 0s at the end of the document
