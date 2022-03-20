@@ -542,11 +542,7 @@ class Route:
         @returns The next empty row in the worksheet
         """
         # Include the onboard row
-        worksheet.cell(row=current_row, column=1).value = self.route
-        worksheet.cell(row=current_row, column=3).value = \
-            self.getDescriptorAndDirectionTrunc(19)
-        worksheet.cell(row=current_row, column=4).value = 0
-        worksheet.cell(row=current_row, column=6).value = "Onboard"
+        worksheet.cell(row=current_row, column=7).value = "Onboard"
 
         # Get the total onboards for the route
         onboard_total = 0
