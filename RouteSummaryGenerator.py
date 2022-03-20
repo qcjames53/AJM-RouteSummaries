@@ -8,8 +8,9 @@
 #   https://github.com/qcjames53/AJM-RouteSummaries
 
 from calendar import c
+from turtle import color
 import openpyxl
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, PatternFill, Color
 import datetime
 from enum import Enum
 from typing import Dict
@@ -76,7 +77,7 @@ class RouteManager:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addStop(self, route, stop_no, street, cross_street) -> None:
+    def addStop(self, route, stop_no, street, cross_street, is_timed) -> None:
         """
         Adds a stop to the specified route object.
         
@@ -84,13 +85,14 @@ class RouteManager:
         @param stop_no The stop number to add
         @param street The main street for the stop
         @param cross_street The cross street for the stop
+        @param is_timed True if this is a timed stop
         """
         # if the route key does not exist, create the route
         if route not in self.routes:
             self.routes[route] = Route(route, self.log)
         
         # Add the stop to the appropriate route
-        self.routes[route].addStop(stop_no, street, cross_street)
+        self.routes[route].addStop(stop_no, street, cross_street, is_timed)
 
     def addData(self, route, stop_no, datetime, run, arrival_time, \
         schedule_time, offs, ons, onboard) -> bool:
@@ -341,18 +343,24 @@ class Route:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addStop(self, stop_no, street, cross_street) -> None:
+    def addStop(self, stop_no, street, cross_street, is_timed) -> None:
         """
         Adds a stop of stop_no to this route
         
         @param stop_no The number of the stop.
         @param street The main street of this stop.
         @param cross_street The main cross street of this stop.
+        @param is_timed True if this is a timed stop
         """
         # If stop exists, throw error and return
         if stop_no in self.stops:
             self.log.logError("Tried to add stop " + str(stop_no) + " to route " + str(self.route) + " when it already exists.")
             return
+
+        # If timed stop, add to timed stops list
+        if is_timed:
+            self.timed_stops.append(stop_no)
+            self.timed_stops.sort()
 
         self.stops[stop_no] = Stop(self.route, stop_no, street, cross_street)
         self.stops[stop_no].setRouteData(self.descriptor, self.direction)
@@ -383,11 +391,6 @@ class Route:
 
             # Sort by time, date instead of date, time
             self.times.sort(key=lambda x: (x.time(), x.date()))
-
-        # If has time data, add to timed stops where neccesary
-        if (arrival_time is not None) and (stop_no not in self.timed_stops):
-            self.timed_stops.append(stop_no)
-            self.timed_stops.sort()
 
         # Set the onboard value for this route if the value is provided
         if onboard is not None:
@@ -554,6 +557,26 @@ class Route:
 
         # Build totals for all stops
         for stop_no in self.stops:
+            # if this stop is a timed stop, shade it yellow
+            if stop_no in self.timed_stops:
+                worksheet.cell(row=current_row, column=4).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+                worksheet.cell(row=current_row, column=5).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+                worksheet.cell(row=current_row, column=6).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+                worksheet.cell(row=current_row, column=7).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+                worksheet.cell(row=current_row, column=8).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+                worksheet.cell(row=current_row, column=9).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+                worksheet.cell(row=current_row, column=10).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+                worksheet.cell(row=current_row, column=11).fill = \
+                    PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
+
+            # input stop data
             current_row = self.stops[stop_no].buildRouteTotalsByStop( \
                 worksheet, current_row)
         return current_row
@@ -852,8 +875,8 @@ class Stop:
         worksheet.cell(row=current_row, column=3).value = \
             self.getDescriptorAndDirectionTrunc(19)
         worksheet.cell(row=current_row, column=4).value = self.stop_no
-        worksheet.cell(row=current_row, column=6).value = str(self.street)[0:14]
-        worksheet.cell(row=current_row, column=7).value = str(self.cross_street)[0:14]
+        worksheet.cell(row=current_row, column=6).value = self.getStreetTrunc(14)
+        worksheet.cell(row=current_row, column=7).value = self.getCrossStreetTrunc(14)
         worksheet.cell(row=current_row, column=8).value = ons
         worksheet.cell(row=current_row, column=9).value = offs
         worksheet.cell(row=current_row, column=10).value = total
@@ -1012,7 +1035,8 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
         if isinstance(stop_no, int):
             street = bus_stop.cell(row=current_row, column=3).value
             cross_street = bus_stop.cell(row=current_row, column=4).value
-            route_manager.addStop(current_route, stop_no, street, cross_street)
+            is_timed = bus_stop.cell(row=current_row, column=3).fill.patternType != None
+            route_manager.addStop(current_route, stop_no, street, cross_street, is_timed)
 
     # Get the city name from the bus stop file
     # Done here so all routes are affected by this change
