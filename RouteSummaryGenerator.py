@@ -7,10 +7,12 @@
 # More details about this project can be found in the README file or at:
 #   https://github.com/qcjames53/AJM-RouteSummaries
 
+from calendar import c
 import openpyxl
 from openpyxl.styles import Alignment
 import datetime
 from enum import Enum
+from typing import Dict
 
 from Log import Log
 
@@ -129,6 +131,15 @@ class RouteManager:
 
         # Add data to appropriate route
         self.routes[route].setRouteData(description, direction)
+
+    def setCityName(self, name) -> None:
+        """
+        Sets the city name for this project (should be identical across all routes)
+
+        @param name The name of this city / project
+        """
+        for route in self.routes:
+            self.routes[route].setCityName(name)
 
     def buildLoad(self) -> None:
         """
@@ -288,6 +299,12 @@ class RouteManager:
 
         @param worksheet The excel worksheet to operate on
         """
+        # Set column widths
+        worksheet.column_dimensions["A"].width = 1
+        worksheet.column_dimensions["B"].width = 4
+        worksheet.column_dimensions["C"].width = 11
+        worksheet.column_dimensions["D"].width = 11
+
         current_row = 1
         for route in sorted(self.routes.keys()):
             current_row = self.routes[route].buildDetailReport(worksheet, \
@@ -313,6 +330,7 @@ class Route:
         self.log = log
         self.timed_stops = []
         self.onboard = {}
+        self.city_name = "City Name Unset"
 
     def __str__(self) -> str:
         output = ""
@@ -398,6 +416,14 @@ class Route:
         # Set for all child stops
         for stop_no in self.stops:
             self.stops[stop_no].setRouteData(description, direction)
+
+    def setCityName(self, name) -> None:
+        """
+        Sets the city name for this route (should be identical across all routes)
+
+        @param name The name of this city / project
+        """
+        self.city_name = name
 
     def buildLoad(self) -> None:
         """
@@ -595,42 +621,50 @@ class Route:
             return current_row
 
         # Display the header
-        worksheet.cell(row=current_row, column=3).value = "Route #"
-        worksheet.cell(row=current_row, column=4).value = self.route
-        worksheet.cell(row=current_row, column=5).value = \
+        worksheet.cell(row=current_row, column=3).value = self.city_name
+        worksheet.cell(row=current_row + 1, column=3).value = "Route #" + str(self.route)
+        worksheet.cell(row=current_row + 1, column=4).value = \
             self.getDescriptorAndDirection()
-        worksheet.cell(row=current_row + 2, column=3).value = "Stop Location"
-        worksheet.cell(row=current_row + 3, column=3).value = "Onboard"
+        worksheet.cell(row=current_row + 3, column=3).value = "Stop Location"
+        worksheet.cell(row=current_row + 4, column=4).value = "Onboard"
 
         # Display the time headers, sort by time, date
+        col_totals = {}
         col = 5
         self.times.sort(key=lambda x: (x.time(), x.date()))
         for datetime in self.times:
-            worksheet.cell(row=current_row+1, column=col).value = \
+            worksheet.cell(row=current_row+2, column=col).value = \
                 datetime.date()
-            worksheet.cell(row=current_row+1, column=col+1).value = \
+            worksheet.cell(row=current_row+2, column=col+1).value = \
                 datetime.time()
-            worksheet.cell(row=current_row+2, column=col).value = "On"
-            worksheet.cell(row=current_row+2, column=col+1).value = "Off"
-            worksheet.cell(row=current_row+2, column=col+2).value = "OB"
+            worksheet.cell(row=current_row+3, column=col).value = "On"
+            worksheet.cell(row=current_row+3, column=col+1).value = "Off"
+            worksheet.cell(row=current_row+3, column=col+2).value = "OB"
             worksheet.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 11
 
             # Display onboard if it exists
             if datetime in self.onboard:
-                worksheet.cell(row=current_row+3, column=col+2).value = \
+                worksheet.cell(row=current_row+4, column=col+2).value = \
                 self.onboard[datetime]
+                col_totals[col + 2] = self.onboard[datetime]
             else:
-                worksheet.cell(row=current_row+3, column=col+2).value = 0
+                worksheet.cell(row=current_row+4, column=col+2).value = 0
 
             col += 3
 
         # Display the stops with info
-        current_row += 4
+        current_row += 5
         for stop_no in self.stops:
-            self.stops[stop_no].buildDetailReport(worksheet, current_row)
+            col_totals = self.stops[stop_no].buildDetailReport( \
+                worksheet, current_row, col_totals)
             current_row += 1
 
-        return current_row + 3
+        # Display totals
+        worksheet.cell(row=current_row, column=4).value = "Totals"
+        for col_key in col_totals:
+            worksheet.cell(row=current_row, column=col_key).value = col_totals[col_key]
+
+        return current_row + 2
             
 
 class Stop:
@@ -848,30 +882,45 @@ class Stop:
         delta = data[1] - data[2]
         return round(delta.total_seconds() / 60)
 
-    def buildDetailReport(self, worksheet, current_row) -> None:
+    def buildDetailReport(self, worksheet, current_row, col_totals) -> Dict[int, int]:
         """
         Builds a single row of a detail report sheet.
 
         @param worksheet The worksheet to modify
         @param current_row The current row being operated on
+        @param col_totals A running total of all displayed columns for this route
+
+        @returns A dictionary of the current column totals
         """
         # Display header
         worksheet.cell(row=current_row, column=2).value = self.stop_no
-        worksheet.cell(row=current_row, column=3).value = self.street
-        worksheet.cell(row=current_row, column=4).value = self.cross_street
+        worksheet.cell(row=current_row, column=3).value = self.getStreetTrunc(10)
+        worksheet.cell(row=current_row, column=4).value = self.getCrossStreetTrunc(10)
 
         # Display data for each datetime
         col = 5
         keys = list(self.data.keys())
         keys.sort(key=lambda x: (x.time(), x.date()))
         for datetime in keys:
+            # Add data to the sheet
             worksheet.cell(row=current_row, column=col).value = \
                 self.data[datetime][4]
             worksheet.cell(row=current_row, column=col + 1).value = \
                 self.data[datetime][3]
             worksheet.cell(row=current_row, column=col + 2).value = \
                 self.data[datetime][5]
+
+            # Add the totals to the running totals dict
+            # Ternary ops handle the case of uninitialized columns
+            col_totals[col] = self.data[datetime][4] + (col_totals[col] if col in col_totals else 0)
+            col_totals[col + 1] = self.data[datetime][3] + (col_totals[col + 1] if col + 1 in col_totals else 0)
+            col_totals[col + 2] = self.data[datetime][5] + (col_totals[col + 2] if col + 2 in col_totals else 0)
+
+            # Increment the current column
             col += 3
+
+        # Return the column totals
+        return col_totals
         
 
 def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath, 
@@ -935,6 +984,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
     current_route = None
     current_direction = None
     current_route_name = None
+    current_city = None
 
     for current_row in range(1,bus_stop.max_row + 1):
         # Check for new route header
@@ -949,6 +999,10 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
             # Set the route data
             route_manager.setRouteData(current_route, current_route_name, current_direction)
 
+            # If the city name is unset, pull it from this header
+            if current_city is None:
+                current_city = str(bus_stop.cell(row=current_row - 2, column=3).value)
+
         # If current route is None, skip this row
         if current_route is None:
             continue
@@ -959,6 +1013,10 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
             street = bus_stop.cell(row=current_row, column=3).value
             cross_street = bus_stop.cell(row=current_row, column=4).value
             route_manager.addStop(current_route, stop_no, street, cross_street)
+
+    # Get the city name from the bus stop file
+    # Done here so all routes are affected by this change
+    route_manager.setCityName(current_city)
 
     # start parsing the ride checks file
     log.logGeneral("Parsing ride checks file")
