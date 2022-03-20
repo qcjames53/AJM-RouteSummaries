@@ -433,7 +433,7 @@ class Route:
         """
         @param l Length of the output string
 
-        @returns A truncated string representation of this routes descriptor and direction
+        @returns A truncated string representation of this route's descriptor and direction
         """
         remaining_l = max(0, l - len(str(self.direction.value)) - 1)
         return self.descriptor[0:remaining_l] + " " + str(self.direction.value)
@@ -548,9 +548,9 @@ class Route:
         col = 7
         for stop in self.timed_stops:
             worksheet.cell(row=current_row, column=col).value = \
-                self.stops[stop].street[0:7]
+                self.stops[stop].getStreetTrunc(7)
             worksheet.cell(row=current_row + 1, column=col).value = \
-                self.stops[stop].cross_street[0:7]
+                self.stops[stop].getCrossStreetTrunc(7)
             col += 1
         current_row += 2
 
@@ -590,6 +590,10 @@ class Route:
         @param current_row The worksheet row to start on
         @returns The next empty row in the worksheet
         """
+        # Skip if no data stored
+        if self.times is None or len(self.times) == 0:
+            return current_row
+
         # Display the header
         worksheet.cell(row=current_row, column=3).value = "Route #"
         worksheet.cell(row=current_row, column=4).value = self.route
@@ -598,9 +602,10 @@ class Route:
         worksheet.cell(row=current_row + 2, column=3).value = "Stop Location"
         worksheet.cell(row=current_row + 3, column=3).value = "Onboard"
 
-        # Display the time headers
+        # Display the time headers, sort by time, date
         col = 5
-        for datetime in sorted(self.times):
+        self.times.sort(key=lambda x: (x.time(), x.date()))
+        for datetime in self.times:
             worksheet.cell(row=current_row+1, column=col).value = \
                 datetime.date()
             worksheet.cell(row=current_row+1, column=col+1).value = \
@@ -769,6 +774,26 @@ class Stop:
             total_ons += self.data[datetime][4]
         return total_offs, total_ons
 
+    def getStreetTrunc(self, l) -> str:
+        """
+        @param l Length of the output string
+
+        @returns A truncated string representation of this stop's street
+        """
+        if self.street is None:
+            return None
+        return str(self.street)[0:l]
+
+    def getCrossStreetTrunc(self, l) -> str:
+        """
+        @param l Length of the output string
+
+        @returns A truncated string representation of this stop's cross street
+        """
+        if self.cross_street is None:
+            return None
+        return str(self.cross_street)[0:l]
+
     def buildRouteTotalsByStop(self, worksheet, current_row) -> int:
         """
         Builds a route total for this stop for all datetimes
@@ -837,7 +862,9 @@ class Stop:
 
         # Display data for each datetime
         col = 5
-        for datetime in sorted(self.data.keys()):
+        keys = list(self.data.keys())
+        keys.sort(key=lambda x: (x.time(), x.date()))
+        for datetime in keys:
             worksheet.cell(row=current_row, column=col).value = \
                 self.data[datetime][4]
             worksheet.cell(row=current_row, column=col + 1).value = \
