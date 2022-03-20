@@ -615,6 +615,8 @@ class Route:
             # Write run number to row
             worksheet.cell(row=current_row, column=6).value = \
                 self.stops[self.timed_stops[0]].getRun(datetime)
+            worksheet.cell(row=current_row, column=6).alignment = \
+                Alignment(horizontal="right")
 
             # Write stop data to row
             col = 7
