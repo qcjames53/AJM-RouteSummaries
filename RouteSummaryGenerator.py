@@ -13,7 +13,7 @@ import openpyxl
 from openpyxl.styles import Alignment, PatternFill, Color
 import datetime
 from enum import Enum
-from typing import Dict
+from typing import Dict, Tuple, List
 
 from Log import Log
 
@@ -556,6 +556,7 @@ class Route:
         current_row += 1
 
         # Build totals for all stops
+        running_totals = [0, 0, 0, onboard_total]
         for stop_no in self.stops:
             # if this stop is a timed stop, shade it yellow
             if stop_no in self.timed_stops:
@@ -577,9 +578,17 @@ class Route:
                     PatternFill(patternType="solid", fill_type="solid", fgColor=Color("FFFF00"))
 
             # input stop data
-            current_row = self.stops[stop_no].buildRouteTotalsByStop( \
-                worksheet, current_row)
-        return current_row
+            current_row, running_totals = self.stops[stop_no].buildRouteTotalsByStop( \
+                worksheet, current_row, running_totals)
+
+        # Display totals
+        worksheet.cell(row=current_row, column=7).value = "Totals"
+        worksheet.cell(row=current_row, column=8).value = running_totals[0]
+        worksheet.cell(row=current_row, column=9).value = running_totals[1]
+        worksheet.cell(row=current_row, column=10).value = running_totals[2]
+        worksheet.cell(row=current_row, column=11).value = running_totals[3]
+
+        return current_row + 1
 
     def buildOnTimeDetail(self, worksheet, current_row) -> int:
         """
@@ -853,13 +862,15 @@ class Stop:
             return None
         return str(self.cross_street)[0:l]
 
-    def buildRouteTotalsByStop(self, worksheet, current_row) -> int:
+    def buildRouteTotalsByStop(self, worksheet, current_row, running_totals) -> Tuple[int, List[int]]:
         """
         Builds a route total for this stop for all datetimes
 
         @param worksheet The worksheet to operate on
         @param current_row The row to start on in the worksheet
-        @returns The next blank row on the workbook
+        @ param running_totals A list of running totals for each statistic
+
+        @returns The next blank row on the workbook, the running totals
         """
         ons = 0
         offs = 0
@@ -884,7 +895,13 @@ class Stop:
         worksheet.cell(row=current_row, column=10).value = total
         worksheet.cell(row=current_row, column=11).value = load
 
-        return current_row + 1
+        # Update the running totals
+        running_totals[0] += ons
+        running_totals[1] += offs
+        running_totals[2] += total
+        running_totals[3] += load
+
+        return current_row + 1, running_totals
 
     def getMinutesLate(self, datetime) -> int:
         """
@@ -971,7 +988,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
     log.logGeneral("Output document created")
 
     # Try to open the ride checks file, if can't return major error
-    log.logGeneral("Opening ride checks workbook")
+    log.logGeneral("Loading ride checks workbook (this may take some time)")
     try:
         ride_checks_wb = openpyxl.load_workbook(filename=ride_checks_filepath, data_only=True)
     except Exception:
@@ -987,7 +1004,7 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
     ride_checks = ride_checks_wb.active
 
     # Try to open the bus stop file, if can't return major error
-    log.logGeneral("Opening bus stop workbook")
+    log.logGeneral("Loading bus stop workbook")
     try:
         bus_stop_wb = openpyxl.load_workbook(filename=bus_stop_filepath, data_only=True)
     except Exception:
