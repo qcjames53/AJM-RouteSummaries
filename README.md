@@ -63,7 +63,7 @@ The sheet may contain an unlimited number of column-aligned tables on arbitrary 
     * The route number of this table
 
 * DIRECTION
-    * The direction of the route. Valid inputs are **[IB, OB, NB, EB, SB, WB]**, representing the inbound busses, outbound busses, and the four cardial directions. 
+    * The direction of the route. Valid inputs are **[IB, OB, NB, EB, SB, WB, LP]**, representing the inbound busses, outbound busses, and the four cardial directions. 
 
 Additionally, each row of the table represents a stop on this route. Each row must be populated with the following columns:
 
