@@ -362,7 +362,7 @@ class Route:
             self.timed_stops.append(stop_no)
             self.timed_stops.sort()
 
-        self.stops[stop_no] = Stop(self.route, stop_no, street, cross_street)
+        self.stops[stop_no] = Stop(self.route, stop_no, street, cross_street, self.log)
         self.stops[stop_no].setRouteData(self.descriptor, self.direction)
 
     def addData(self, stop_no, datetime, run, arrival_time, schedule_time, \
@@ -701,7 +701,7 @@ class Stop:
     """
     A class that represents a single stop on a bus route
     """
-    def __init__(self, route, stop_no, street, cross_street) -> None:
+    def __init__(self, route, stop_no, street, cross_street, log:Log) -> None:
         """
         Initialize with metadata
         
@@ -709,6 +709,7 @@ class Stop:
         @param stop_no The stop number of this stop
         @param street The main street of this stop
         @param cross_street The cross street of this stop
+        @param log The workbook's log object
         """
         self.route = route
         self.stop_no = stop_no
@@ -716,6 +717,7 @@ class Stop:
         self.cross_street = cross_street
         self.descriptor = "Descriptor Unset"
         self.direction = Direction.UN
+        self.log = log
 
         # Data is of the following format:
         # [
@@ -752,6 +754,11 @@ class Stop:
         @param ons Optional: The number of passengers boarding the bus
         @returns Boolean of whether the data was successfully added
         """
+        # Check whether this data is a duplicate of an existing row
+        if datetime in self.data:
+            self.log.logError(f"Route {self.route} stop {self.stop_no} at {datetime}: Tried to overwrite existing data. Check input for duplicate rows.")
+            return False
+
         # Clean input data
         if not (isinstance(offs, int) and offs >= 0):
             offs = 0
