@@ -28,6 +28,10 @@ class Direction(Enum):
     LP = "LP" # loop
     UN = "UN" # unknown
 
+    # implemented to allow for sorting by direction
+    def __lt__(self, other):
+        return str(self) < str(other)
+
 # Utility functions
 def stringToDirection(dir_string) -> Direction:
     """
@@ -77,7 +81,7 @@ class RouteManager:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def addStop(self, route, stop_no, street, cross_street, is_timed) -> None:
+    def addStop(self, route, direction: Direction, stop_no, street, cross_street, is_timed) -> None:
         """
         Adds a stop to the specified route object.
         
@@ -88,13 +92,13 @@ class RouteManager:
         @param is_timed True if this is a timed stop
         """
         # if the route key does not exist, create the route
-        if route not in self.routes:
-            self.routes[route] = Route(route, self.log)
+        if (route, direction) not in self.routes:
+            self.routes[(route, direction)] = Route(route, direction, self.log)
         
         # Add the stop to the appropriate route
-        self.routes[route].addStop(stop_no, street, cross_street, is_timed)
+        self.routes[(route, direction)].addStop(stop_no, street, cross_street, is_timed)
 
-    def addData(self, route, stop_no, datetime, run, arrival_time, \
+    def addData(self, route, direction: Direction, stop_no, datetime, run, arrival_time, \
         schedule_time, offs, ons, onboard) -> bool:
         """
         Adds data about a stop to the specified route object
@@ -111,12 +115,12 @@ class RouteManager:
         @returns Boolean of whether the data was successfully added
         """
         # If the route does not exist, log an error and return
-        if route not in self.routes:
-            self.log.logError("Tried to add data to nonexistent route: " + str(route))
+        if (route, direction) not in self.routes:
+            self.log.logError(f"Tried to add data to nonexistent route: {route} {direction}")
             return False
 
         # Add the data to the appropriate route
-        return self.routes[route].addData(stop_no, datetime, run, arrival_time,\
+        return self.routes[(route, direction)].addData(stop_no, datetime, run, arrival_time,\
             schedule_time, offs, ons, onboard)
 
     def setRouteData(self, route, description, direction: Direction) -> None:
@@ -129,10 +133,10 @@ class RouteManager:
         """
         # if the route key does not exist, create the route
         if route not in self.routes:
-            self.routes[route] = Route(route, self.log)
+            self.routes[(route, direction)] = Route(route, direction, self.log)
 
         # Add data to appropriate route
-        self.routes[route].setRouteData(description, direction)
+        self.routes[(route, direction)].setRouteData(description)
 
     def setCityName(self, name) -> None:
         """
@@ -147,8 +151,8 @@ class RouteManager:
         """
         Builds and saves the loads for all routes
         """
-        for route in self.routes:
-            self.routes[route].buildLoad()
+        for key in self.routes:
+            self.routes[key].buildLoad()
 
     def buildRouteTotals(self, worksheet) -> None:
         """
@@ -174,11 +178,11 @@ class RouteManager:
         
         # Display values
         current_row = 2
-        for route in sorted(self.routes.keys()):
-            offs, ons, total = self.routes[route].getTotalOffsAndOns()
-            worksheet.cell(row=current_row, column=1).value = route
+        for key in sorted(self.routes.keys()):
+            offs, ons, total = self.routes[key].getTotalOffsAndOns()
+            worksheet.cell(row=current_row, column=1).value = key[0]
             worksheet.cell(row=current_row, column=3).value = \
-                self.routes[route].getDescriptorAndDirectionTrunc(29)
+                self.routes[key].getDescriptorAndDirectionTrunc(29)
             worksheet.cell(row=current_row, column=4).value = ons
             worksheet.cell(row=current_row, column=5).value = offs
             worksheet.cell(row=current_row, column=6).value = total
@@ -213,8 +217,8 @@ class RouteManager:
 
         # Display values
         current_row = 2
-        for route in sorted(self.routes.keys()):
-            current_row = self.routes[route].buildTotalsByTime(worksheet,\
+        for key in sorted(self.routes.keys()):
+            current_row = self.routes[key].buildTotalsByTime(worksheet,\
             current_row)
 
     def buildRouteTotalsByStop(self, worksheet) -> None:
@@ -235,7 +239,7 @@ class RouteManager:
 
         # Display values
         current_row = 0
-        for route in sorted(self.routes.keys()):
+        for key in sorted(self.routes.keys()):
             # Display headers
             current_row += 1
             worksheet.cell(row=current_row, column=1).value = "Route #"
@@ -261,7 +265,7 @@ class RouteManager:
                 Alignment(horizontal="right")
 
             # Display stop information
-            current_row = self.routes[route].buildRouteTotalsByStop(worksheet, \
+            current_row = self.routes[key].buildRouteTotalsByStop(worksheet, \
                 current_row + 1)
 
     def buildOnTimeDetail(self, worksheet) -> None:
@@ -290,8 +294,8 @@ class RouteManager:
 
         # Display values
         current_row = 2
-        for route in sorted(self.routes.keys()):
-            current_row = self.routes[route].buildOnTimeDetail(worksheet, \
+        for key in sorted(self.routes.keys()):
+            current_row = self.routes[key].buildOnTimeDetail(worksheet, \
                 current_row)
 
     def buildDetailReport(self, worksheet) -> None:
@@ -308,8 +312,8 @@ class RouteManager:
         worksheet.column_dimensions["D"].width = 11
 
         current_row = 1
-        for route in sorted(self.routes.keys()):
-            current_row = self.routes[route].buildDetailReport(worksheet, \
+        for key in sorted(self.routes.keys()):
+            current_row = self.routes[key].buildDetailReport(worksheet, \
                 current_row)
 
 
@@ -317,18 +321,19 @@ class Route:
     """
     A class that allows for easy storage of the stops inside of a route
     """
-    def __init__(self, route, log:Log) -> None:
+    def __init__(self, route, direction: Direction, log:Log) -> None:
         """
         Initialize Route with the appropriate internal variables
         
         @param route The route number
+        @param direction The direction of the route as a Direction object
         @param log The workbook's log object
         """
         self.route = route
         self.stops = {}
         self.times = []
         self.descriptor = "Descriptor Unset"
-        self.direction = Direction.UN
+        self.direction = direction
         self.log = log
         self.timed_stops = []
         self.onboard = {}
@@ -382,7 +387,7 @@ class Route:
         """
         # If stop_no does not exist, throw error and return
         if stop_no not in self.stops:
-            self.log.logError("Tried to add data to stop " + str(stop_no) + " in route " + str(self.route) + " when stop does not exist.")
+            self.log.logError("Tried to add data to stop " + str(stop_no) + " in route " + str(self.route) + " " + str(self.direction) + " when stop does not exist.")
             return False
 
         # If datetime does not exist, add it to datetimes and sort
@@ -396,7 +401,7 @@ class Route:
         if onboard is not None:
             # Log a warning if we're changing an already set onboard number
             if datetime in self.onboard and self.onboard[datetime] != onboard:
-                self.log.logWarning("Route " + str(self.route) + " time " + \
+                self.log.logWarning("Route " + str(self.route) + " " + str(self.direction) + " time " + \
                     str(datetime) + " stop " + str(stop_no) + \
                     "Overriding onboard value " + str(self.onboard[datetime]) +\
                     " with new value " + str(onboard))
@@ -406,15 +411,13 @@ class Route:
         return self.stops[stop_no].addData(datetime, run, arrival_time, \
             schedule_time, offs, ons)
 
-    def setRouteData(self, description, direction: Direction) -> None:
+    def setRouteData(self, description) -> None:
         """
         Sets the metadata for this route
         
         @param description A text description of the route (University, Uptown)
-        @param direction The direction of the route as a Direction object
         """
         self.descriptor = description
-        self.direction = direction
 
         # Set for all child stops
         for stop_no in self.stops:
@@ -448,9 +451,7 @@ class Route:
 
                 # Display an error if current_load drops below 0
                 if current_load < 0:
-                    self.log.logWarning("Route " + str(self.route) + " time " +\
-                        str(datetime) + " stop " + str(stop_no) + \
-                        ": The load has dropped below 0 (check for bad data)")
+                    self.log.logWarning(f"Route {self.route} {self.direction} {datetime} stop {stop_no}: The load has dropped below 0 (check for bad data)")
 
     def getDescriptorAndDirection(self) -> str:
         """
@@ -1052,13 +1053,13 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
         if current_route is None:
             continue
 
-        # If stop number is numberical, add this row
+        # If stop number is numerical, add this row
         stop_no = bus_stop.cell(row=current_row, column=5).value
         if isinstance(stop_no, int):
             street = bus_stop.cell(row=current_row, column=3).value
             cross_street = bus_stop.cell(row=current_row, column=4).value
             is_timed = bus_stop.cell(row=current_row, column=3).fill.patternType != None
-            route_manager.addStop(current_route, stop_no, street, cross_street, is_timed)
+            route_manager.addStop(current_route, current_direction, stop_no, street, cross_street, is_timed)
 
     # Get the city name from the bus stop file
     # Done here so all routes are affected by this change
@@ -1175,7 +1176,9 @@ def generateSummary(log:Log, ride_checks_filepath, bus_stop_filepath,
         if schedule_time is not None:
             schedule_datetime = datetime.datetime.combine(date, schedule_time)
 
-        add_data_result = route_manager.addData(route, stop_number, \
+        direction = stringToDirection(direction)
+
+        add_data_result = route_manager.addData(route, direction, stop_number, \
             start_datetime, run, arrival_datetime, schedule_datetime, offs, \
             ons, onboard)
 
